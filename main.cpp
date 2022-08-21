@@ -38,7 +38,12 @@ int main()
     container->insert_front(a);
     tree.set_root(container);
 
-    for (auto child : container->children())
-        std::puts(dryad::node_cast<leaf_node>(child)->msg);
+    for (auto [ev, node] : dryad::traverse(tree))
+    {
+        if (auto leaf = dryad::node_try_cast<leaf_node>(node))
+            std::puts(leaf->msg);
+        else
+            std::puts("container");
+    }
 }
 

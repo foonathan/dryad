@@ -79,6 +79,8 @@ class node
     using _traits = node_kind_traits<NodeKind>;
 
 public:
+    using node_kind_type = NodeKind;
+
     NodeKind kind() const
     {
         return _traits::from_int(_kind);
@@ -194,6 +196,11 @@ public:
         return {this};
     }
 
+    bool is_container() const
+    {
+        return _is_container;
+    }
+
     //=== color ===//
     dryad::color color() const
     {
@@ -275,6 +282,12 @@ private:
 template <typename NodeKind>
 class node_container : public node<NodeKind>
 {
+public:
+    node<NodeKind>* first_child() const
+    {
+        return _first_child;
+    }
+
 protected:
     explicit node_container(node_ctor ctor, NodeKind kind) : node<NodeKind>(ctor, kind)
     {
@@ -282,11 +295,6 @@ protected:
     }
 
     ~node_container() = default;
-
-    node<NodeKind>* first_child() const
-    {
-        return _first_child;
-    }
 
     void insert_first_child(node<NodeKind>* child)
     {

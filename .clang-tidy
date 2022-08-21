@@ -29,5 +29,5 @@ Checks: >
     -readability-uppercase-literal-suffix,
 WarningsAsErrors: '*'
 FormatStyle: 'file'
-HeaderFilterRegex: 'include/lauf/'
+HeaderFilterRegex: 'include/dryad/'
 
