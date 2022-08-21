@@ -12,7 +12,7 @@
 namespace dryad
 {
 /// Base class for nodes that contain a linked-list of child nodes.
-template <typename NodeKind>
+template <typename NodeKind, typename ChildT = node<NodeKind>>
 class node_list : public node_container<NodeKind>
 {
 public:
@@ -22,7 +22,7 @@ public:
     {
         struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
         {
-            T* _cur = nullptr;
+            const node<NodeKind>* _cur = nullptr;
 
             operator typename _children_range<const T>::iterator() const
             {
@@ -31,11 +31,11 @@ public:
 
             operator T*() const
             {
-                return _cur;
+                return deref();
             }
             T* deref() const
             {
-                return _cur;
+                return (T*)_cur;
             }
             void increment()
             {
@@ -65,7 +65,7 @@ public:
         {
             if (!empty())
                 // The last child has a pointer back to self.
-                return {{}, (node<NodeKind>*)_self};
+                return {{}, _self};
             else
                 // begin() == nullptr, so return that as well.
                 return {};
@@ -74,11 +74,11 @@ public:
         const node_list* _self;
     };
 
-    _children_range<node<NodeKind>> children()
+    _children_range<ChildT> children()
     {
         return {this};
     }
-    _children_range<const node<NodeKind>> children() const
+    _children_range<const ChildT> children() const
     {
         return {this};
     }
@@ -86,7 +86,7 @@ public:
     //=== modifiers ===//
     using iterator = typename _children_range<node<NodeKind>>::iterator;
 
-    iterator insert_front(node<NodeKind>* child)
+    iterator insert_front(ChildT* child)
     {
         DRYAD_PRECONDITION(!child->is_linked_in_tree());
 
@@ -99,7 +99,7 @@ public:
         return {{}, child};
     }
 
-    iterator insert_after(iterator pos, node<NodeKind>* child)
+    iterator insert_after(iterator pos, ChildT* child)
     {
         DRYAD_PRECONDITION(!child->is_linked_in_tree());
 
@@ -110,7 +110,10 @@ public:
     }
 
 protected:
-    explicit node_list(node_ctor ctor, NodeKind kind) : node_container<NodeKind>(ctor, kind) {}
+    explicit node_list(node_ctor ctor, NodeKind kind) : node_container<NodeKind>(ctor, kind)
+    {
+        static_assert(dryad::is_node<ChildT, NodeKind>);
+    }
 
     ~node_list() = default;
 
