@@ -6,6 +6,7 @@
 
 #include <dryad/_detail/assert.hpp>
 #include <dryad/_detail/config.hpp>
+#include <dryad/_detail/iterator.hpp>
 
 namespace dryad
 {
@@ -84,14 +85,23 @@ public:
     }
 
     //=== tree relationship ===//
-    node* next_node() const
-    {
-        return reinterpret_cast<node*>(_ptr & ~0b111);
-    }
-
     bool is_linked_in_tree() const
     {
         return next_node() != nullptr;
+    }
+
+    node* next_node()
+    {
+        return reinterpret_cast<node*>(_ptr & ~0b111);
+    }
+    const node* next_node() const
+    {
+        return reinterpret_cast<const node*>(_ptr & ~0b111);
+    }
+
+    bool next_node_is_parent() const
+    {
+        return (_ptr & 0b1) != 0;
     }
 
     /// Root node returns a pointer to itself.
@@ -109,6 +119,79 @@ public:
     node* parent()
     {
         return const_cast<node*>(DRYAD_CTHIS->parent());
+    }
+
+    template <typename T>
+    struct _sibling_range
+    {
+        struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
+        {
+            T* _cur = nullptr;
+
+            operator typename _sibling_range<const T>::iterator() const
+            {
+                return {_cur};
+            }
+
+            operator T*() const
+            {
+                return _cur;
+            }
+            T* deref() const
+            {
+                return _cur;
+            }
+            void increment()
+            {
+                if (_cur->next_node_is_parent())
+                {
+                    // We're pointing to the parent, go to first child instead.
+                    auto container = static_cast<node_container<NodeKind>*>(_cur->next_node());
+                    _cur           = container->first_child();
+                }
+                else
+                    // We're pointing to a sibling, go there.
+                    _cur = _cur->next_node();
+            }
+            bool equal(iterator rhs) const
+            {
+                return _cur == rhs._cur;
+            }
+        };
+
+        bool empty() const
+        {
+            return begin() == end();
+        }
+
+        iterator begin() const
+        {
+            if (!_self->is_linked_in_tree())
+                return {};
+
+            // We begin with the next node after ours.
+            // If we don't have siblings, this is our node itself.
+            return ++end();
+        }
+        iterator end() const
+        {
+            if (!_self->is_linked_in_tree())
+                return {};
+
+            // We end when we're back at the node.
+            return {{}, (node<NodeKind>*)_self};
+        }
+
+        const node* _self;
+    };
+
+    _sibling_range<node<NodeKind>> siblings()
+    {
+        return {this};
+    }
+    _sibling_range<const node<NodeKind>> siblings() const
+    {
+        return {this};
     }
 
     //=== color ===//
@@ -156,16 +239,6 @@ protected:
     }
 
 private:
-    node_container<NodeKind>* next_container() const
-    {
-        DYRAD_PRECONDITION(next_node()->_is_container);
-        return static_cast<node_container<NodeKind>*>(next_node());
-    }
-    bool next_is_parent() const
-    {
-        return (_ptr & 0b1) != 0;
-    }
-
     void set_next_sibling(node* node)
     {
         _ptr = reinterpret_cast<std::uintptr_t>(node);
@@ -199,6 +272,8 @@ private:
 };
 
 /// Base class for all nodes that own child nodes, which should be traversed.
+/// This is just an implementation detail that is not relevant unless you implement your own
+/// containers.
 template <typename NodeKind>
 class node_container : public node<NodeKind>
 {
@@ -238,6 +313,8 @@ protected:
 
 private:
     node<NodeKind>* _first_child;
+
+    friend node<NodeKind>;
 };
 } // namespace dryad
 

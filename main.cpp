@@ -32,12 +32,14 @@ int main()
 
     auto a         = tree.create<leaf_node>("a");
     auto b         = tree.create<leaf_node>("b");
+    auto c         = tree.create<leaf_node>("c");
     auto container = tree.create<container_node>();
+    container->insert_front(c);
     container->insert_front(b);
     container->insert_front(a);
     tree.set_root(container);
 
-    for (auto child : container->children())
+    for (auto child : b->siblings())
         std::puts(static_cast<leaf_node*>(child)->msg);
 }
 
