@@ -35,7 +35,8 @@ int main()
     auto container = tree.create<container_node>();
     container->insert_front(c);
     container->insert_front(b);
-    container->insert_front(a);
+    auto a_iter = container->insert_front(a);
+    container->erase_after(a_iter);
     tree.set_root(container);
 
     for (auto [ev, node] : dryad::traverse(tree))

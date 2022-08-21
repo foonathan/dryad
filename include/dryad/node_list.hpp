@@ -103,10 +103,18 @@ public:
     {
         DRYAD_PRECONDITION(!child->is_linked_in_tree());
 
-        this->insert_child_after(pos, child);
+        if (pos._cur == nullptr)
+            this->insert_first_child(child);
+        else
+            this->insert_child_after(pos, child);
         ++this->_user_data32();
 
         return {{}, child};
+    }
+
+    ChildT* erase_after(iterator pos)
+    {
+        return static_cast<ChildT*>(this->erase_child_after(pos));
     }
 
 protected:

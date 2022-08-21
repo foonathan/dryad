@@ -315,6 +315,30 @@ protected:
         pos->set_next_sibling(child);
     }
 
+    node<NodeKind>* erase_child_after(node<NodeKind>* pos)
+    {
+        if (pos == nullptr)
+        {
+            auto child = _first_child;
+
+            if (child->next_node_is_parent())
+                _first_child = nullptr;
+            else
+                _first_child = child->next_node();
+
+            child->set_next_sibling(nullptr);
+            return child;
+        }
+        else
+        {
+            DRYAD_PRECONDITION(!pos->next_node_is_parent());
+            auto child = pos->next_node();
+            pos->copy_next(child);
+            child->set_next_sibling(nullptr);
+            return child;
+        }
+    }
+
 private:
     node<NodeKind>* _first_child;
 
