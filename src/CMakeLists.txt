@@ -8,8 +8,8 @@ set(header_files
         ${include_dir}/_detail/iterator.hpp
         ${include_dir}/_detail/std.hpp
 
+        ${include_dir}/list_node.hpp
         ${include_dir}/node.hpp
-        ${include_dir}/node_list.hpp
         ${include_dir}/tree.hpp)
 
 add_library(dryad INTERFACE)

@@ -3,8 +3,8 @@
 
 #include <cstdio>
 
+#include <dryad/list_node.hpp>
 #include <dryad/node.hpp>
-#include <dryad/node_list.hpp>
 #include <dryad/tree.hpp>
 
 enum class node_kind
@@ -20,7 +20,7 @@ struct leaf_node : dryad::define_node<node_kind::leaf>
     leaf_node(dryad::node_ctor ctor, const char* msg) : base_node(ctor), msg(msg) {}
 };
 
-struct container_node : dryad::define_node<node_kind::container, dryad::node_list<node_kind>>
+struct container_node : dryad::define_node<node_kind::container, dryad::list_node<node_kind>>
 {
     DRYAD_NODE_CTOR;
 };

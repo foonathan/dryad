@@ -1,8 +1,8 @@
 // Copyright (C) 2022 Jonathan Müller and dryad contributors
 // SPDX-License-Identifier: BSL-1.0
 
-#ifndef DRYAD_NODE_LIST_HPP_INCLUDED
-#define DRYAD_NODE_LIST_HPP_INCLUDED
+#ifndef DRYAD_LIST_NODE_HPP_INCLUDED
+#define DRYAD_LIST_NODE_HPP_INCLUDED
 
 #include <dryad/_detail/assert.hpp>
 #include <dryad/_detail/config.hpp>
@@ -13,7 +13,7 @@ namespace dryad
 {
 /// Base class for nodes that contain a linked-list of child nodes.
 template <typename NodeKind, typename ChildT = node<NodeKind>>
-class node_list : public node_container<NodeKind>
+class list_node : public container_node<NodeKind>
 {
 public:
     //=== access ===//
@@ -71,7 +71,7 @@ public:
                 return {};
         }
 
-        const node_list* _self;
+        const list_node* _self;
     };
 
     _children_range<ChildT> children()
@@ -118,16 +118,16 @@ public:
     }
 
 protected:
-    explicit node_list(node_ctor ctor, NodeKind kind) : node_container<NodeKind>(ctor, kind)
+    explicit list_node(node_ctor ctor, NodeKind kind) : container_node<NodeKind>(ctor, kind)
     {
         static_assert(dryad::is_node<ChildT, NodeKind>);
     }
 
-    ~node_list() = default;
+    ~list_node() = default;
 
 private:
     // We use user_data32 to store the number of children.
-    using node_container<NodeKind>::user_data32;
+    using container_node<NodeKind>::user_data32;
 };
 } // namespace dryad
 

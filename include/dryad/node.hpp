@@ -13,7 +13,7 @@ namespace dryad
 template <typename NodeKind>
 class node;
 template <typename NodeKind>
-class node_container;
+class container_node;
 } // namespace dryad
 
 namespace dryad
@@ -148,7 +148,7 @@ public:
                 if (_cur->next_node_is_parent())
                 {
                     // We're pointing to the parent, go to first child instead.
-                    auto container = static_cast<node_container<NodeKind>*>(_cur->next_node());
+                    auto container = static_cast<container_node<NodeKind>*>(_cur->next_node());
                     _cur           = container->first_child();
                 }
                 else
@@ -273,14 +273,14 @@ private:
     std::uint16_t  _user_data16;
     std::uint32_t  _user_data32;
 
-    friend node_container<NodeKind>;
+    friend container_node<NodeKind>;
 };
 
 /// Base class for all nodes that own child nodes, which should be traversed.
 /// This is just an implementation detail that is not relevant unless you implement your own
 /// containers.
 template <typename NodeKind>
-class node_container : public node<NodeKind>
+class container_node : public node<NodeKind>
 {
 public:
     node<NodeKind>* first_child() const
@@ -289,12 +289,12 @@ public:
     }
 
 protected:
-    explicit node_container(node_ctor ctor, NodeKind kind) : node<NodeKind>(ctor, kind)
+    explicit container_node(node_ctor ctor, NodeKind kind) : node<NodeKind>(ctor, kind)
     {
         this->_is_container = true;
     }
 
-    ~node_container() = default;
+    ~container_node() = default;
 
     void insert_first_child(node<NodeKind>* child)
     {

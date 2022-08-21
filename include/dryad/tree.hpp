@@ -87,7 +87,7 @@ public:
         {
             if (_ev == traverse_event::enter)
             {
-                auto container = static_cast<node_container<typename T::node_kind_type>*>(_cur);
+                auto container = static_cast<container_node<typename T::node_kind_type>*>(_cur);
                 auto child     = container->first_child();
                 if (child != nullptr)
                 {
