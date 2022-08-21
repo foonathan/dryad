@@ -206,8 +206,6 @@ public:
     }
 
 protected:
-    using base_node = node;
-
     //=== construction/destruction ===//
     explicit node(node_ctor, NodeKind kind)
     : _ptr(reinterpret_cast<std::uintptr_t>((node*)nullptr)), _is_container(false),
@@ -278,8 +276,6 @@ template <typename NodeKind>
 class node_container : public node<NodeKind>
 {
 protected:
-    using base_node = node_container;
-
     explicit node_container(node_ctor ctor, NodeKind kind) : node<NodeKind>(ctor, kind)
     {
         this->_is_container = true;
@@ -316,6 +312,28 @@ private:
 
     friend node<NodeKind>;
 };
+} // namespace dryad
+
+namespace dryad
+{
+template <auto NodeKind, typename Base = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
+class define_node : public Base
+{
+public:
+    static constexpr auto kind()
+    {
+        return NodeKind;
+    }
+
+    explicit define_node(node_ctor ctor) : Base(ctor, kind()) {}
+
+protected:
+    using base_node = define_node;
+
+    ~define_node() = default;
+};
+
+#define DRYAD_NODE_CTOR using base_node::base_node;
 } // namespace dryad
 
 #endif // DRYAD_NODE_HPP_INCLUDED

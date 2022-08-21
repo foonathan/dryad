@@ -11,13 +11,11 @@
 
 namespace dryad
 {
-/// (Base) Class for nodes that contain a linked-list of child nodes.
+/// Base class for nodes that contain a linked-list of child nodes.
 template <typename NodeKind>
 class node_list : public node_container<NodeKind>
 {
 public:
-    explicit node_list(node_ctor ctor, NodeKind kind) : node_container<NodeKind>(ctor, kind) {}
-
     //=== access ===//
     template <typename T>
     struct _children_range
@@ -112,7 +110,9 @@ public:
     }
 
 protected:
-    using base_node = node_list;
+    explicit node_list(node_ctor ctor, NodeKind kind) : node_container<NodeKind>(ctor, kind) {}
+
+    ~node_list() = default;
 
 private:
     // We use user_data32 to store the number of children.
