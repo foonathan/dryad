@@ -20,8 +20,7 @@ struct leaf_node : dryad::define_node<node_kind::leaf>
     leaf_node(dryad::node_ctor ctor, const char* msg) : base_node(ctor), msg(msg) {}
 };
 
-struct container_node
-: dryad::define_node<node_kind::container, dryad::node_list<node_kind, leaf_node>>
+struct container_node : dryad::define_node<node_kind::container, dryad::node_list<node_kind>>
 {
     DRYAD_NODE_CTOR;
 };
@@ -40,6 +39,6 @@ int main()
     tree.set_root(container);
 
     for (auto child : container->children())
-        std::puts(child->msg);
+        std::puts(dryad::node_cast<leaf_node>(child)->msg);
 }
 

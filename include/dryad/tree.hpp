@@ -25,7 +25,7 @@ public:
     template <typename T, typename... Args>
     T* create(Args&&... args)
     {
-        static_assert(is_node<T, NodeKind>);
+        static_assert(is_defined_node<T, NodeKind>);
 
         // TODO: memory management
         return new T(node_ctor{}, DRYAD_FWD(args)...);

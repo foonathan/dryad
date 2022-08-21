@@ -316,9 +316,15 @@ private:
 
 namespace dryad
 {
+struct _define_node
+{};
+
+/// Defines a node with the specified kind and base.
 template <auto NodeKind, typename Base = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
-class define_node : public Base
+class define_node : public Base, _define_node
 {
+    static_assert(is_node<Base, DRYAD_DECAY_DECLTYPE(NodeKind)>);
+
 public:
     static constexpr auto kind()
     {
@@ -333,7 +339,47 @@ protected:
     ~define_node() = default;
 };
 
+template <typename T, typename NodeKind>
+constexpr bool is_defined_node = std::is_base_of_v<_define_node, T>;
+
 #define DRYAD_NODE_CTOR using base_node::base_node;
+} // namespace dryad
+
+namespace dryad
+{
+template <typename T, typename NodeKind>
+T* node_cast(node<NodeKind>* ptr)
+{
+    static_assert(is_defined_node<T, NodeKind>);
+    DRYAD_PRECONDITION(ptr->kind() == T::kind());
+    return static_cast<T*>(ptr);
+}
+template <typename T, typename NodeKind>
+const T* node_cast(const node<NodeKind>* ptr)
+{
+    static_assert(is_defined_node<T, NodeKind>);
+    DRYAD_PRECONDITION(ptr->kind() == T::kind());
+    return static_cast<const T*>(ptr);
+}
+
+template <typename T, typename NodeKind>
+T* node_try_cast(node<NodeKind>* ptr)
+{
+    static_assert(is_defined_node<T, NodeKind>);
+    if (ptr->kind() == T::kind())
+        return static_cast<T*>(ptr);
+    else
+        return nullptr;
+}
+template <typename T, typename NodeKind>
+const T* node_try_cast(const node<NodeKind>* ptr)
+{
+    static_assert(is_defined_node<T, NodeKind>);
+    if (ptr->kind() == T::kind())
+        return static_cast<const T*>(ptr);
+    else
+        return nullptr;
+}
 } // namespace dryad
 
 #endif // DRYAD_NODE_HPP_INCLUDED
