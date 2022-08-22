@@ -204,15 +204,128 @@ auto traverse(const node<NodeKind>* n)
     return _traverse_range<node<NodeKind>>(n);
 }
 
-template <typename NodeKind>
-auto traverse(tree<NodeKind>& t)
+template <typename NodeKind, typename MemoryResource>
+auto traverse(tree<NodeKind, MemoryResource>& t)
 {
     return traverse(t.root());
 }
-template <typename NodeKind>
-auto traverse(const tree<NodeKind>& t)
+template <typename NodeKind, typename MemoryResource>
+auto traverse(const tree<NodeKind, MemoryResource>& t)
 {
     return traverse(t.root());
+}
+} // namespace dryad
+
+namespace dryad::_detail
+{
+template <typename... T>
+struct node_type_list
+{
+    template <typename U>
+    using insert = node_type_list<U, T...>;
+};
+
+template <auto... LambdaCallOps>
+struct _node_types_for_lambdas;
+template <>
+struct _node_types_for_lambdas<>
+{
+    using type = node_type_list<>;
+};
+template <typename Lambda, typename T, void (Lambda::*Ptr)(T*), auto... Tail>
+struct _node_types_for_lambdas<Ptr, Tail...>
+{
+    using tail = typename _node_types_for_lambdas<Tail...>::type;
+    using type = typename tail::template insert<std::decay_t<T>>;
+};
+template <typename Lambda, typename T, void (Lambda::*Ptr)(T*) const, auto... Tail>
+struct _node_types_for_lambdas<Ptr, Tail...>
+{
+    using tail = typename _node_types_for_lambdas<Tail...>::type;
+    using type = typename tail::template insert<std::decay_t<T>>;
+};
+template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*), auto... Tail>
+struct _node_types_for_lambdas<Ptr, Tail...>
+{
+    using tail = typename _node_types_for_lambdas<Tail...>::type;
+    using type = typename tail::template insert<std::decay_t<T>>;
+};
+template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*) const, auto... Tail>
+struct _node_types_for_lambdas<Ptr, Tail...>
+{
+    using tail = typename _node_types_for_lambdas<Tail...>::type;
+    using type = typename tail::template insert<std::decay_t<T>>;
+};
+
+template <typename... Lambdas>
+using node_types_for_lambdas = typename _node_types_for_lambdas<&Lambdas::operator()...>::type;
+} // namespace dryad::_detail
+
+namespace dryad
+{
+template <typename NodeTypeList, typename... Lambdas>
+struct _visit_tree;
+template <typename... NodeTypes, typename... Lambdas>
+struct _visit_tree<_detail::node_type_list<NodeTypes...>, Lambdas...>
+{
+    template <typename T, typename Node, typename Lambda>
+    DRYAD_FORCE_INLINE static auto call(traverse_event ev, Node* node, Lambda&& lambda)
+        -> decltype(lambda(ev, DRYAD_DECLVAL(T*)), true)
+    {
+        lambda(ev, static_cast<T*>(node));
+        return true;
+    }
+    template <typename T, typename Node, typename Lambda>
+    DRYAD_FORCE_INLINE static auto call(traverse_event ev, Node* node, Lambda& lambda)
+        -> decltype(lambda(DRYAD_DECLVAL(T*)), true)
+    {
+        if (ev != traverse_event::exit)
+            lambda(static_cast<T*>(node));
+        return true;
+    }
+
+    template <bool All = false, typename Tree>
+    DRYAD_FORCE_INLINE static void visit(Tree&& tree, Lambdas&&... lambdas)
+    {
+        for (auto [ev, node] : dryad::traverse(tree))
+        {
+            auto                  kind = node->kind();
+            [[maybe_unused]] auto found_callback
+                = ((kind == NodeTypes::kind()
+                        ? call<NodeTypes>(ev, node_cast<NodeTypes>(node), lambdas)
+                        : false)
+                   || ...);
+
+            if constexpr (All)
+                DRYAD_ASSERT(found_callback, "missing type for callback");
+        }
+    }
+};
+
+template <typename NodeKind, typename MemoryResource, typename... Lambdas>
+void visit(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
+{
+    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
+    _visit_tree<node_types, Lambdas...>::visit(tree, DRYAD_FWD(lambdas)...);
+}
+template <typename NodeKind, typename MemoryResource, typename... Lambdas>
+void visit(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
+{
+    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
+    _visit_tree<node_types, Lambdas...>::visit(tree, DRYAD_FWD(lambdas)...);
+}
+
+template <typename NodeKind, typename MemoryResource, typename... Lambdas>
+void visit_all(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
+{
+    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
+    _visit_tree<node_types, Lambdas...>::template visit<true>(tree, DRYAD_FWD(lambdas)...);
+}
+template <typename NodeKind, typename MemoryResource, typename... Lambdas>
+void visit_all(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
+{
+    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
+    _visit_tree<node_types, Lambdas...>::template visit<true>(tree, DRYAD_FWD(lambdas)...);
 }
 } // namespace dryad
 

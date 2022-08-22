@@ -39,12 +39,9 @@ int main()
     container->erase_after(a_iter);
     tree.set_root(container);
 
-    for (auto [ev, node] : dryad::traverse(tree))
-    {
-        if (auto leaf = dryad::node_try_cast<leaf_node>(node))
-            std::puts(leaf->msg);
-        else
-            std::puts("container");
-    }
+    dryad::visit_all(
+        tree, //
+        [](container_node*) { std::puts("container"); },
+        [](leaf_node* node) { std::puts(node->msg); });
 }
 

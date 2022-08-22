@@ -12,7 +12,7 @@
 #define DRYAD_MOV(...) static_cast<std::remove_reference_t<decltype(__VA_ARGS__)>&&>(__VA_ARGS__)
 #define DRYAD_FWD(...) static_cast<decltype(__VA_ARGS__)>(__VA_ARGS__)
 
-#define DRYAD_DECLVAL(...) lexy::_detail::declval<__VA_ARGS__>()
+#define DRYAD_DECLVAL(...) dryad::_detail::declval<__VA_ARGS__>()
 
 #define DRYAD_DECAY_DECLTYPE(...) std::decay_t<decltype(__VA_ARGS__)>
 
@@ -40,6 +40,19 @@ constexpr bool is_decayed_same = std::is_same_v<std::decay_t<T>, std::decay_t<U>
 template <typename T, typename Fallback>
 using type_or = std::conditional_t<std::is_void_v<T>, Fallback, T>;
 } // namespace dryad::_detail
+
+//=== force inline ===//
+#ifndef DRYAD_FORCE_INLINE
+#    if defined(__has_cpp_attribute)
+#        if __has_cpp_attribute(gnu::always_inline)
+#            define DRYAD_FORCE_INLINE [[gnu::always_inline]]
+#        endif
+#    endif
+#
+#    ifndef DRYAD_FORCE_INLINE
+#        define DRYAD_FORCE_INLINE inline
+#    endif
+#endif
 
 //=== empty_member ===//
 #ifndef DRYAD_EMPTY_MEMBER
