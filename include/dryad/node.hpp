@@ -68,7 +68,7 @@ class node_ctor
 {
     node_ctor() = default;
 
-    template <typename NodeKind>
+    template <typename, typename>
     friend class tree;
 };
 

@@ -5,30 +5,33 @@
 #define DRYAD_TREE_HPP_INCLUDED
 
 #include <dryad/_detail/config.hpp>
+#include <dryad/arena.hpp>
 #include <dryad/node.hpp>
 
 namespace dryad
 {
-template <typename NodeKind>
+template <typename NodeKind, typename MemoryResource = void>
 class tree
 {
 public:
     //=== construction ===//
     tree() = default;
+    explicit tree(MemoryResource* resource) : _arena(resource) {}
 
-    tree(tree&&)            = default;
-    tree& operator=(tree&&) = default;
+    tree(tree&&) noexcept            = default;
+    tree& operator=(tree&&) noexcept = default;
 
     ~tree() = default;
 
     //=== node creation ===//
+    /// Creates a node of type T that is not yet linked into the tree.
     template <typename T, typename... Args>
     T* create(Args&&... args)
     {
         static_assert(is_defined_node<T, NodeKind>);
+        static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
 
-        // TODO: memory management
-        return new T(node_ctor{}, DRYAD_FWD(args)...);
+        return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);
     }
 
     //=== root node ===//
@@ -47,7 +50,8 @@ public:
     }
 
 private:
-    node<NodeKind>* _root = nullptr;
+    arena<MemoryResource> _arena;
+    node<NodeKind>*       _root = nullptr;
 };
 } // namespace dryad
 

@@ -41,5 +41,25 @@ template <typename T, typename Fallback>
 using type_or = std::conditional_t<std::is_void_v<T>, Fallback, T>;
 } // namespace dryad::_detail
 
+//=== empty_member ===//
+#ifndef DRYAD_EMPTY_MEMBER
+
+#    if defined(__has_cpp_attribute)
+#        if __has_cpp_attribute(no_unique_address)
+#            define DRYAD_HAS_EMPTY_MEMBER 1
+#        endif
+#    endif
+#    ifndef DRYAD_HAS_EMPTY_MEMBER
+#        define DRYAD_HAS_EMPTY_MEMBER 0
+#    endif
+
+#    if DRYAD_HAS_EMPTY_MEMBER
+#        define DRYAD_EMPTY_MEMBER [[no_unique_address]]
+#    else
+#        define DRYAD_EMPTY_MEMBER
+#    endif
+
+#endif
+
 #endif // DRYAD_DETAIL_CONFIG_HPP_INCLUDED
 
