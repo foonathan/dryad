@@ -65,7 +65,7 @@ struct _list_node_children_range
             return {};
     }
 
-    const container_node<typename T::node_kind_type>* _self;
+    const node<typename T::node_kind_type>* _self;
 };
 
 /// Base class for nodes that contain a linked-list of child nodes.
@@ -109,13 +109,14 @@ public:
             this->insert_first_child(child);
         else
             this->insert_child_after(pos, child);
-        ++this->_user_data32();
+        ++this->user_data32();
 
         return {{}, child};
     }
 
     ChildT* erase_after(iterator pos)
     {
+        --this->user_data32();
         return static_cast<ChildT*>(this->erase_child_after(pos));
     }
 

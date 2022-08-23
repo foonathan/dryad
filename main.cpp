@@ -15,9 +15,12 @@ enum class node_kind
 
 struct leaf_node : dryad::basic_node<node_kind::leaf>
 {
-    const char* msg;
+    DRYAD_ATTRIBUTE_USER_DATA_PTR(const char*, msg);
 
-    leaf_node(dryad::node_ctor ctor, const char* msg) : node_base(ctor), msg(msg) {}
+    leaf_node(dryad::node_ctor ctor, const char* msg) : node_base(ctor)
+    {
+        set_msg(msg);
+    }
 };
 
 struct container_node : dryad::list_node<node_kind::container>
@@ -39,9 +42,12 @@ int main()
     container->erase_after(a_iter);
     tree.set_root(container);
 
+    for (auto node : container->children())
+    {}
+
     dryad::visit_all(
         tree, //
         [](container_node*) { std::puts("container"); },
-        [](leaf_node* node) { std::puts(node->msg); });
+        [](leaf_node* node) { std::puts(node->msg()); });
 }
 

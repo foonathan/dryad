@@ -12,8 +12,6 @@ namespace dryad
 {
 template <typename NodeKind>
 class node;
-template <typename NodeKind>
-class container_node;
 } // namespace dryad
 
 namespace dryad
@@ -120,6 +118,15 @@ public:
         return (_ptr & 0b1) != 0;
     }
 
+    node<NodeKind>* first_child()
+    {
+        return _is_container ? static_cast<node<NodeKind>*>(_user_data_ptr) : nullptr;
+    }
+    const node<NodeKind>* first_child() const
+    {
+        return _is_container ? static_cast<const node<NodeKind>*>(_user_data_ptr) : nullptr;
+    }
+
     /// Root node returns a pointer to itself.
     const node* parent() const
     {
@@ -162,8 +169,10 @@ public:
                 if (_cur->next_node_is_parent())
                 {
                     // We're pointing to the parent, go to first child instead.
-                    auto container = static_cast<container_node<NodeKind>*>(_cur->next_node());
-                    _cur           = container->first_child();
+                    // As it's a container, this is the ptr user data.
+                    DRYAD_ASSERT(_cur->next_node()->is_container,
+                                 "parent node is not a container?!");
+                    _cur = _cur->next_node()->first_child();
                 }
                 else
                     // We're pointing to a sibling, go there.
@@ -236,6 +245,10 @@ protected:
     {
         return _user_data32;
     }
+    void*& user_data_ptr()
+    {
+        return _user_data_ptr;
+    }
 
     std::uint16_t user_data16() const
     {
@@ -245,11 +258,15 @@ protected:
     {
         return _user_data32;
     }
+    void* user_data_ptr() const
+    {
+        return _user_data_ptr;
+    }
 
 private:
     explicit node(node_ctor, NodeKind kind)
     : _ptr(reinterpret_cast<std::uintptr_t>((node*)nullptr)), _is_container(false),
-      _kind(_traits::to_int(kind)), _user_data16(0), _user_data32(0)
+      _kind(_traits::to_int(kind)), _user_data16(0), _user_data32(0), _user_data_ptr(nullptr)
     {}
     ~node() = default;
 
@@ -281,81 +298,12 @@ private:
     std::uint16_t  _kind : 15;
     std::uint16_t  _user_data16;
     std::uint32_t  _user_data32;
+    void*          _user_data_ptr; // If it's a container, pointer to first child.
 
-    friend class container_node<NodeKind>;
     template <auto>
     friend class basic_node;
-};
-
-/// Type-erased base class for all nodes that own child nodes, which should be traversed.
-/// This is just an implementation detail that is not relevant unless you implement your own
-/// containers.
-template <typename NodeKind>
-class container_node : public node<NodeKind>
-{
-public:
-    node<NodeKind>* first_child() const
-    {
-        return _first_child;
-    }
-
-protected:
-    void insert_first_child(node<NodeKind>* child)
-    {
-        DRYAD_PRECONDITION(_first_child == nullptr);
-        child->set_next_parent(this);
-        _first_child = child;
-    }
-    void insert_child_front(node<NodeKind>* child)
-    {
-        DRYAD_PRECONDITION(_first_child != nullptr);
-        child->set_next_sibling(_first_child);
-        _first_child = child;
-    }
-    void insert_child_after(node<NodeKind>* pos, node<NodeKind>* child)
-    {
-        DRYAD_PRECONDITION(_first_child != nullptr);
-        child->copy_next(pos);
-        pos->set_next_sibling(child);
-    }
-
-    node<NodeKind>* erase_child_after(node<NodeKind>* pos)
-    {
-        if (pos == nullptr)
-        {
-            auto child = _first_child;
-
-            if (child->next_node_is_parent())
-                _first_child = nullptr;
-            else
-                _first_child = child->next_node();
-
-            child->set_next_sibling(nullptr);
-            return child;
-        }
-        else
-        {
-            DRYAD_PRECONDITION(!pos->next_node_is_parent());
-            auto child = pos->next_node();
-            pos->copy_next(child);
-            child->set_next_sibling(nullptr);
-            return child;
-        }
-    }
-
-private:
-    explicit container_node(node_ctor ctor, NodeKind kind) : node<NodeKind>(ctor, kind)
-    {
-        this->_is_container = true;
-    }
-
-    ~container_node() = default;
-
-    node<NodeKind>* _first_child;
-
-    friend node<NodeKind>;
-    template <auto>
-    friend class basic_container_node;
+    template <typename T>
+    friend class _container_node;
 };
 } // namespace dryad
 
@@ -386,11 +334,116 @@ protected:
     ~basic_node() = default;
 };
 
+#define DRYAD_NODE_CTOR(Name)                                                                      \
+    explicit Name(::dryad::node_ctor ctor) : node_base(ctor) {}
+
+#define DRYAD_ATTRIBUTE_USER_DATA16(T, Name)                                                       \
+    static_assert(sizeof(T) <= sizeof(std::uint16_t));                                             \
+    T Name() const                                                                                 \
+    {                                                                                              \
+        return static_cast<T>(node_base::user_data16());                                           \
+    }                                                                                              \
+    void set_##Name(T val)                                                                         \
+    {                                                                                              \
+        node_base::user_data16() = static_cast<std::uint16_t>(val);                                \
+    }                                                                                              \
+    void user_data16() = delete
+
+#define DRYAD_ATTRIBUTE_USER_DATA32(T, Name)                                                       \
+    static_assert(sizeof(T) <= sizeof(std::uint32_t));                                             \
+    T Name() const                                                                                 \
+    {                                                                                              \
+        return static_cast<T>(node_base::user_data32());                                           \
+    }                                                                                              \
+    void set_##Name(T val)                                                                         \
+    {                                                                                              \
+        node_base::user_data32() = static_cast<std::uint32_t>(val);                                \
+    }                                                                                              \
+    void user_data32() = delete
+
+#define DRYAD_ATTRIBUTE_USER_DATA_PTR(T, Name)                                                     \
+    static_assert(sizeof(T) <= sizeof(void*));                                                     \
+    T Name() const                                                                                 \
+    {                                                                                              \
+        return (T)(node_base::user_data_ptr());                                                    \
+    }                                                                                              \
+    void set_##Name(T val)                                                                         \
+    {                                                                                              \
+        node_base::user_data_ptr() = (void*)(val);                                                 \
+    }                                                                                              \
+    void user_data_ptr() = delete
+} // namespace dryad
+
+namespace dryad
+{
+// We use a helper class that is partially type-erased to remove template bloat.
+template <typename NodeKind>
+class _container_node : public node<NodeKind>
+{
+protected:
+    void insert_first_child(node<NodeKind>* child)
+    {
+        DRYAD_PRECONDITION(this->first_child() == nullptr);
+        child->set_next_parent(this);
+        this->user_data_ptr() = child;
+    }
+    void insert_child_front(node<NodeKind>* child)
+    {
+        DRYAD_PRECONDITION(this->first_child() != nullptr);
+        child->set_next_sibling(this->first_child());
+        this->user_data_ptr() = child;
+    }
+    void insert_child_after(node<NodeKind>* pos, node<NodeKind>* child)
+    {
+        DRYAD_PRECONDITION(this->first_child() != nullptr);
+        child->copy_next(pos);
+        pos->set_next_sibling(child);
+    }
+
+    node<NodeKind>* erase_child_after(node<NodeKind>* pos)
+    {
+        if (pos == nullptr)
+        {
+            auto child = this->first_child();
+
+            if (child->next_node_is_parent())
+                this->user_data_ptr() = nullptr;
+            else
+                this->user_data_ptr() = child->next_node();
+
+            child->set_next_sibling(nullptr);
+            return child;
+        }
+        else
+        {
+            DRYAD_PRECONDITION(!pos->next_node_is_parent());
+            auto child = pos->next_node();
+            pos->copy_next(child);
+            child->set_next_sibling(nullptr);
+            return child;
+        }
+    }
+
+private:
+    explicit _container_node(node_ctor ctor, NodeKind kind) : node<NodeKind>(ctor, kind)
+    {
+        this->_is_container = true;
+    }
+
+    ~_container_node() = default;
+
+    using node<NodeKind>::user_data_ptr;
+
+    friend node<NodeKind>;
+    template <auto>
+    friend class basic_container_node;
+};
+
 /// Base class for all nodes that own child nodes, which should be traversed.
 /// This is just an implementation detail that is not relevant unless you implement your own
 /// containers.
 template <auto NodeKind>
-class basic_container_node : public container_node<DRYAD_DECAY_DECLTYPE(NodeKind)>
+class basic_container_node : public _container_node<DRYAD_DECAY_DECLTYPE(NodeKind)>
 {
 public:
     static constexpr bool type_is_abstract()
@@ -410,13 +463,10 @@ public:
 protected:
     using node_base = basic_container_node;
     explicit basic_container_node(node_ctor ctor)
-    : container_node<DRYAD_DECAY_DECLTYPE(NodeKind)>(ctor, kind())
+    : _container_node<DRYAD_DECAY_DECLTYPE(NodeKind)>(ctor, kind())
     {}
     ~basic_container_node() = default;
 };
-
-#define DRYAD_NODE_CTOR(Name)                                                                      \
-    explicit Name(::dryad::node_ctor ctor) : node_base(ctor) {}
 } // namespace dryad
 
 namespace dryad

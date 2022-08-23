@@ -91,8 +91,7 @@ public:
         {
             if (_ev == traverse_event::enter)
             {
-                auto container = static_cast<container_node<typename T::node_kind_type>*>(_cur);
-                auto child     = container->first_child();
+                auto child = _cur->first_child();
                 if (child != nullptr)
                 {
                     // We go to the first child next.
