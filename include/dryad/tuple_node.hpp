@@ -21,26 +21,23 @@ class single_node : public basic_container_node<AbstractBase, NodeKind>
 public:
     ChildT* child()
     {
-        return _child;
+        return static_cast<ChildT*>(this->first_child());
     }
     const ChildT* child() const
     {
-        return _child;
+        return static_cast<const ChildT*>(this->first_child());
     }
 
 protected:
     using node_base = single_node;
 
     explicit single_node(node_ctor ctor, ChildT* child)
-    : basic_container_node<AbstractBase, NodeKind>(ctor), _child(child)
+    : basic_container_node<AbstractBase, NodeKind>(ctor)
     {
         this->insert_first_child(child);
     }
 
     ~single_node() = default;
-
-private:
-    ChildT* _child;
 };
 } // namespace dryad
 
@@ -123,21 +120,25 @@ namespace dryad
 /// Base class for nodes that contain the specified child types.
 ///
 /// The child nodes must be given in the constructor and cannot be replaced.
-template <typename AbstractBase, auto NodeKind, typename... ChildTs>
+template <typename AbstractBase, auto NodeKind, typename HeadChildT, typename... TailChildTs>
 class tuple_node : public basic_container_node<AbstractBase, NodeKind>
 {
-    static_assert(sizeof...(ChildTs) > 0);
-
 public:
     template <std::size_t N>
     auto child()
     {
-        return _children.template get<N>();
+        if constexpr (N == 0)
+            return static_cast<HeadChildT*>(this->first_child());
+        else
+            return _children.template get<N - 1>();
     }
     template <std::size_t N>
     auto child() const
     {
-        return DRAYD_AS_CONST(_children.template get<N>());
+        if constexpr (N == 0)
+            return static_cast<const HeadChildT*>(this->first_child());
+        else
+            return DRAYD_AS_CONST(_children.template get<N - 1>());
     }
 
 protected:
@@ -145,55 +146,22 @@ protected:
 
     template <typename H, typename... T>
     explicit tuple_node(node_ctor ctor, H* head, T*... tail)
-    : basic_container_node<AbstractBase, NodeKind>(ctor), _children(head, tail...)
+    : basic_container_node<AbstractBase, NodeKind>(ctor), _children(tail...)
     {
         this->insert_first_child(head);
 
-        auto pos = static_cast<node<DRYAD_DECAY_DECLTYPE(NodeKind)>*>(head);
+        auto pos = this->first_child();
         ((this->insert_child_after(pos, tail), pos = tail), ...);
     }
 
     ~tuple_node() = default;
 
 private:
-    _detail::tuple<ChildTs*...> _children;
-};
-
-template <typename AbstractBase, auto NodeKind, typename FirstChild,
-          typename SecondChild = FirstChild>
-class pair_node : public tuple_node<AbstractBase, NodeKind, FirstChild, SecondChild>
-{
-public:
-    FirstChild* first_child()
-    {
-        return this->template child<0>();
-    }
-    const FirstChild* first_child() const
-    {
-        return this->template child<0>();
-    }
-
-    SecondChild* second_child()
-    {
-        return this->template child<1>();
-    }
-    const SecondChild* second_child() const
-    {
-        return this->template child<1>();
-    }
-
-protected:
-    using node_base = pair_node;
-
-    explicit pair_node(node_ctor ctor, FirstChild* first, SecondChild* second)
-    : tuple_node<AbstractBase, NodeKind, FirstChild, SecondChild>(ctor, first, second)
-    {}
-
-    ~pair_node() = default;
+    _detail::tuple<TailChildTs*...> _children;
 };
 
 template <typename AbstractBase, auto NodeKind, typename LeftChild, typename RightChild = LeftChild>
-class binary_node : public pair_node<AbstractBase, NodeKind, LeftChild, RightChild>
+class binary_node : public tuple_node<AbstractBase, NodeKind, LeftChild, RightChild>
 {
 public:
     LeftChild* left_child()
@@ -218,7 +186,7 @@ protected:
     using node_base = binary_node;
 
     explicit binary_node(node_ctor ctor, LeftChild* first, RightChild* second)
-    : pair_node<AbstractBase, NodeKind, LeftChild, RightChild>(ctor, first, second)
+    : tuple_node<AbstractBase, NodeKind, LeftChild, RightChild>(ctor, first, second)
     {}
 
     ~binary_node() = default;

@@ -18,23 +18,22 @@ public:
     //=== access ===//
     bool has_child() const
     {
-        return _child != nullptr;
+        return this->first_child() != nullptr;
     }
 
     ChildT* child()
     {
-        return _child;
+        return static_cast<ChildT*>(this->first_child());
     }
     const ChildT* child() const
     {
-        return _child;
+        return static_cast<const ChildT*>(this->first_child());
     }
 
     //=== modifiers ===//
     void insert_child(ChildT* child)
     {
         this->insert_first_child(child);
-        _child = child;
     }
 
     ChildT* erase_child()
@@ -48,9 +47,6 @@ protected:
     explicit optional_node(node_ctor ctor) : basic_container_node<AbstractBase, NodeKind>(ctor) {}
 
     ~optional_node() = default;
-
-private:
-    ChildT* _child = nullptr;
 };
 } // namespace dryad
 
