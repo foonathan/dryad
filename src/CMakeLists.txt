@@ -9,6 +9,7 @@ set(header_files
         ${include_dir}/_detail/memory_resource.hpp
         ${include_dir}/_detail/std.hpp
 
+        ${include_dir}/abstract_node.hpp
         ${include_dir}/arena.hpp
         ${include_dir}/list_node.hpp
         ${include_dir}/node.hpp

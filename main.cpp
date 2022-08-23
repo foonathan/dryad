@@ -3,6 +3,7 @@
 
 #include <cstdio>
 
+#include <dryad/abstract_node.hpp>
 #include <dryad/list_node.hpp>
 #include <dryad/node.hpp>
 #include <dryad/tree.hpp>
@@ -13,7 +14,14 @@ enum class node_kind
     leaf
 };
 
-struct leaf_node : dryad::basic_node<node_kind::leaf>
+struct node : dryad::abstract_node_all<node_kind>
+{
+    DRYAD_ATTRIBUTE_USER_DATA16(short, foo);
+
+    DRYAD_ABSTRACT_NODE_CTOR(node)
+};
+
+struct leaf_node : dryad::basic_node<node, node_kind::leaf>
 {
     DRYAD_ATTRIBUTE_USER_DATA_PTR(const char*, msg);
 
@@ -23,7 +31,7 @@ struct leaf_node : dryad::basic_node<node_kind::leaf>
     }
 };
 
-struct container_node : dryad::list_node<node_kind::container>
+struct container_node : dryad::list_node<dryad::node<node_kind>, node_kind::container>
 {
     DRYAD_NODE_CTOR(container_node);
 };
