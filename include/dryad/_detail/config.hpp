@@ -16,7 +16,8 @@
 
 #define DRYAD_DECAY_DECLTYPE(...) std::decay_t<decltype(__VA_ARGS__)>
 
-#define DRYAD_CTHIS (const_cast<const std::remove_pointer_t<decltype(this)>*>(this))
+#define DRYAD_AS_CONST(Ptr) (const_cast<const std::remove_pointer_t<decltype(Ptr)>*>(Ptr))
+#define DRYAD_CTHIS DRYAD_AS_CONST(this)
 
 namespace dryad::_detail
 {

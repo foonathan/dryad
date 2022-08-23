@@ -4,9 +4,9 @@
 #include <cstdio>
 
 #include <dryad/abstract_node.hpp>
-#include <dryad/list_node.hpp>
 #include <dryad/node.hpp>
 #include <dryad/tree.hpp>
+#include <dryad/tuple_node.hpp>
 
 enum class node_kind
 {
@@ -31,9 +31,9 @@ struct leaf_node : dryad::basic_node<node, node_kind::leaf>
     }
 };
 
-struct container_node : dryad::list_node<dryad::node<node_kind>, node_kind::container>
+struct container_node : dryad::single_node<dryad::node<node_kind>, node_kind::container, leaf_node>
 {
-    DRYAD_NODE_CTOR(container_node);
+    container_node(dryad::node_ctor ctor, leaf_node* a) : node_base(ctor, a) {}
 };
 
 int main()
@@ -43,15 +43,8 @@ int main()
     auto a         = tree.create<leaf_node>("a");
     auto b         = tree.create<leaf_node>("b");
     auto c         = tree.create<leaf_node>("c");
-    auto container = tree.create<container_node>();
-    container->insert_front(c);
-    container->insert_front(b);
-    auto a_iter = container->insert_front(a);
-    container->erase_after(a_iter);
+    auto container = tree.create<container_node>(a);
     tree.set_root(container);
-
-    for (auto node : container->children())
-    {}
 
     dryad::visit_all(
         tree, //

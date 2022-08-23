@@ -6,6 +6,7 @@ set(header_files
         ${include_dir}/_detail/assert.hpp
         ${include_dir}/_detail/config.hpp
         ${include_dir}/_detail/iterator.hpp
+        ${include_dir}/_detail/integer_sequence.hpp
         ${include_dir}/_detail/memory_resource.hpp
         ${include_dir}/_detail/std.hpp
 
@@ -13,7 +14,8 @@ set(header_files
         ${include_dir}/arena.hpp
         ${include_dir}/list_node.hpp
         ${include_dir}/node.hpp
-        ${include_dir}/tree.hpp)
+        ${include_dir}/tree.hpp
+        ${include_dir}/tuple_node.hpp)
 
 add_library(dryad INTERFACE)
 add_library(foonathan::dryad ALIAS dryad)
