@@ -13,16 +13,16 @@ enum class node_kind
     leaf
 };
 
-struct leaf_node : dryad::define_node<node_kind::leaf>
+struct leaf_node : dryad::basic_node<node_kind::leaf>
 {
     const char* msg;
 
-    leaf_node(dryad::node_ctor ctor, const char* msg) : base_node(ctor), msg(msg) {}
+    leaf_node(dryad::node_ctor ctor, const char* msg) : node_base(ctor), msg(msg) {}
 };
 
-struct container_node : dryad::define_node<node_kind::container, dryad::list_node<node_kind>>
+struct container_node : dryad::list_node<node_kind::container>
 {
-    DRYAD_NODE_CTOR;
+    DRYAD_NODE_CTOR(container_node);
 };
 
 int main()

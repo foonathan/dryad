@@ -60,6 +60,12 @@ struct node_kind_traits
 
 template <typename T, typename NodeKind>
 constexpr bool is_node = std::is_base_of_v<node<NodeKind>, T>;
+
+struct _basic_node
+{};
+
+template <typename T, typename NodeKind>
+constexpr bool is_basic_node = is_node<T, NodeKind>&& std::is_base_of_v<_basic_node, T>;
 } // namespace dryad
 
 namespace dryad
@@ -72,13 +78,16 @@ class node_ctor
     friend class tree;
 };
 
-/// Base class for all nodes in the AST.
+/// Type-erased base class for all nodes in the AST.
 template <typename NodeKind>
 class node
 {
     using _traits = node_kind_traits<NodeKind>;
 
 public:
+    node(const node&)            = delete;
+    node& operator=(const node&) = delete;
+
     using node_kind_type = NodeKind;
 
     NodeKind kind() const
@@ -213,17 +222,6 @@ public:
     }
 
 protected:
-    //=== construction/destruction ===//
-    explicit node(node_ctor, NodeKind kind)
-    : _ptr(reinterpret_cast<std::uintptr_t>((node*)nullptr)), _is_container(false),
-      _kind(_traits::to_int(kind)), _user_data16(0), _user_data32(0)
-    {}
-
-    node(const node&)            = delete;
-    node& operator=(const node&) = delete;
-
-    ~node() = default;
-
     //=== user data ===//
     std::uint16_t& user_data16()
     {
@@ -244,6 +242,12 @@ protected:
     }
 
 private:
+    explicit node(node_ctor, NodeKind kind)
+    : _ptr(reinterpret_cast<std::uintptr_t>((node*)nullptr)), _is_container(false),
+      _kind(_traits::to_int(kind)), _user_data16(0), _user_data32(0)
+    {}
+    ~node() = default;
+
     void set_next_sibling(node* node)
     {
         _ptr = reinterpret_cast<std::uintptr_t>(node);
@@ -273,10 +277,12 @@ private:
     std::uint16_t  _user_data16;
     std::uint32_t  _user_data32;
 
-    friend container_node<NodeKind>;
+    friend class container_node<NodeKind>;
+    template <auto>
+    friend class basic_node;
 };
 
-/// Base class for all nodes that own child nodes, which should be traversed.
+/// Type-erased base class for all nodes that own child nodes, which should be traversed.
 /// This is just an implementation detail that is not relevant unless you implement your own
 /// containers.
 template <typename NodeKind>
@@ -289,13 +295,6 @@ public:
     }
 
 protected:
-    explicit container_node(node_ctor ctor, NodeKind kind) : node<NodeKind>(ctor, kind)
-    {
-        this->_is_container = true;
-    }
-
-    ~container_node() = default;
-
     void insert_first_child(node<NodeKind>* child)
     {
         DRYAD_PRECONDITION(_first_child == nullptr);
@@ -340,41 +339,61 @@ protected:
     }
 
 private:
+    explicit container_node(node_ctor ctor, NodeKind kind) : node<NodeKind>(ctor, kind)
+    {
+        this->_is_container = true;
+    }
+
+    ~container_node() = default;
+
     node<NodeKind>* _first_child;
 
     friend node<NodeKind>;
+    template <auto>
+    friend class basic_container_node;
 };
 } // namespace dryad
 
 namespace dryad
 {
-struct _define_node
-{};
-
-/// Defines a node with the specified kind and base.
-template <auto NodeKind, typename Base = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
-class define_node : public Base, _define_node
+/// A node without any special members.
+template <auto NodeKind>
+class basic_node : public node<DRYAD_DECAY_DECLTYPE(NodeKind)>, _basic_node
 {
-    static_assert(is_node<Base, DRYAD_DECAY_DECLTYPE(NodeKind)>);
-
 public:
     static constexpr auto kind()
     {
         return NodeKind;
     }
 
-    explicit define_node(node_ctor ctor) : Base(ctor, kind()) {}
-
 protected:
-    using base_node = define_node;
-
-    ~define_node() = default;
+    using node_base = basic_node;
+    explicit basic_node(node_ctor ctor) : node<DRYAD_DECAY_DECLTYPE(NodeKind)>(ctor, kind()) {}
+    ~basic_node() = default;
 };
 
-template <typename T, typename NodeKind>
-constexpr bool is_defined_node = std::is_base_of_v<_define_node, T>;
+/// Base class for all nodes that own child nodes, which should be traversed.
+/// This is just an implementation detail that is not relevant unless you implement your own
+/// containers.
+template <auto NodeKind>
+class basic_container_node : public container_node<DRYAD_DECAY_DECLTYPE(NodeKind)>, _basic_node
+{
+public:
+    static constexpr auto kind()
+    {
+        return NodeKind;
+    }
 
-#define DRYAD_NODE_CTOR using base_node::base_node;
+protected:
+    using node_base = basic_container_node;
+    explicit basic_container_node(node_ctor ctor)
+    : container_node<DRYAD_DECAY_DECLTYPE(NodeKind)>(ctor, kind())
+    {}
+    ~basic_container_node() = default;
+};
+
+#define DRYAD_NODE_CTOR(Name)                                                                      \
+    explicit Name(::dryad::node_ctor ctor) : node_base(ctor) {}
 } // namespace dryad
 
 namespace dryad
@@ -382,14 +401,14 @@ namespace dryad
 template <typename T, typename NodeKind>
 T* node_cast(node<NodeKind>* ptr)
 {
-    static_assert(is_defined_node<T, NodeKind>);
+    static_assert(is_basic_node<T, NodeKind>);
     DRYAD_PRECONDITION(ptr->kind() == T::kind());
     return static_cast<T*>(ptr);
 }
 template <typename T, typename NodeKind>
 const T* node_cast(const node<NodeKind>* ptr)
 {
-    static_assert(is_defined_node<T, NodeKind>);
+    static_assert(is_basic_node<T, NodeKind>);
     DRYAD_PRECONDITION(ptr->kind() == T::kind());
     return static_cast<const T*>(ptr);
 }
@@ -397,7 +416,7 @@ const T* node_cast(const node<NodeKind>* ptr)
 template <typename T, typename NodeKind>
 T* node_try_cast(node<NodeKind>* ptr)
 {
-    static_assert(is_defined_node<T, NodeKind>);
+    static_assert(is_basic_node<T, NodeKind>);
     if (ptr->kind() == T::kind())
         return static_cast<T*>(ptr);
     else
@@ -406,7 +425,7 @@ T* node_try_cast(node<NodeKind>* ptr)
 template <typename T, typename NodeKind>
 const T* node_try_cast(const node<NodeKind>* ptr)
 {
-    static_assert(is_defined_node<T, NodeKind>);
+    static_assert(is_basic_node<T, NodeKind>);
     if (ptr->kind() == T::kind())
         return static_cast<const T*>(ptr);
     else

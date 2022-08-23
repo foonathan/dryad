@@ -28,7 +28,7 @@ public:
     template <typename T, typename... Args>
     T* create(Args&&... args)
     {
-        static_assert(is_defined_node<T, NodeKind>);
+        static_assert(is_basic_node<T, NodeKind>);
         static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
 
         return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);

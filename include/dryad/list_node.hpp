@@ -12,17 +12,19 @@
 namespace dryad
 {
 /// Base class for nodes that contain a linked-list of child nodes.
-template <typename NodeKind, typename ChildT = node<NodeKind>>
-class list_node : public container_node<NodeKind>
+template <auto NodeKind, typename ChildT = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
+class list_node : public basic_container_node<NodeKind>
 {
 public:
+    using node_kind_type = DRYAD_DECAY_DECLTYPE(NodeKind);
+
     //=== access ===//
     template <typename T>
     struct _children_range
     {
         struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
         {
-            const node<NodeKind>* _cur = nullptr;
+            const node<node_kind_type>* _cur = nullptr;
 
             operator typename _children_range<const T>::iterator() const
             {
@@ -84,7 +86,7 @@ public:
     }
 
     //=== modifiers ===//
-    using iterator = typename _children_range<node<NodeKind>>::iterator;
+    using iterator = typename _children_range<node<node_kind_type>>::iterator;
 
     iterator insert_front(ChildT* child)
     {
@@ -118,16 +120,18 @@ public:
     }
 
 protected:
-    explicit list_node(node_ctor ctor, NodeKind kind) : container_node<NodeKind>(ctor, kind)
+    using node_base = list_node;
+    explicit list_node(node_ctor ctor) : basic_container_node<NodeKind>(ctor)
     {
-        static_assert(dryad::is_node<ChildT, NodeKind>);
+        static_assert(std::is_same_v<ChildT, node<node_kind_type>> //
+                      || dryad::is_basic_node<ChildT, node_kind_type>);
     }
 
     ~list_node() = default;
 
 private:
     // We use user_data32 to store the number of children.
-    using container_node<NodeKind>::user_data32;
+    using basic_container_node<NodeKind>::user_data32;
 };
 } // namespace dryad
 
