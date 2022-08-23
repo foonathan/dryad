@@ -60,12 +60,8 @@ struct node_kind_traits
 
 template <typename T, typename NodeKind>
 constexpr bool is_node = std::is_base_of_v<node<NodeKind>, T>;
-
-struct _basic_node
-{};
-
 template <typename T, typename NodeKind>
-constexpr bool is_basic_node = is_node<T, NodeKind>&& std::is_base_of_v<_basic_node, T>;
+constexpr bool is_abstract_node = is_node<T, NodeKind>&& T::type_is_abstract();
 } // namespace dryad
 
 namespace dryad
@@ -89,6 +85,15 @@ public:
     node& operator=(const node&) = delete;
 
     using node_kind_type = NodeKind;
+
+    static constexpr bool type_is_abstract()
+    {
+        return true;
+    }
+    static constexpr bool type_matches_kind(NodeKind)
+    {
+        return true;
+    }
 
     NodeKind kind() const
     {
@@ -358,9 +363,18 @@ namespace dryad
 {
 /// A node without any special members.
 template <auto NodeKind>
-class basic_node : public node<DRYAD_DECAY_DECLTYPE(NodeKind)>, _basic_node
+class basic_node : public node<DRYAD_DECAY_DECLTYPE(NodeKind)>
 {
 public:
+    static constexpr bool type_is_abstract()
+    {
+        return false;
+    }
+    static constexpr bool type_matches_kind(DRYAD_DECAY_DECLTYPE(NodeKind) kind)
+    {
+        return kind == NodeKind;
+    }
+
     static constexpr auto kind()
     {
         return NodeKind;
@@ -376,9 +390,18 @@ protected:
 /// This is just an implementation detail that is not relevant unless you implement your own
 /// containers.
 template <auto NodeKind>
-class basic_container_node : public container_node<DRYAD_DECAY_DECLTYPE(NodeKind)>, _basic_node
+class basic_container_node : public container_node<DRYAD_DECAY_DECLTYPE(NodeKind)>
 {
 public:
+    static constexpr bool type_is_abstract()
+    {
+        return false;
+    }
+    static constexpr bool type_matches_kind(DRYAD_DECAY_DECLTYPE(NodeKind) kind)
+    {
+        return kind == NodeKind;
+    }
+
     static constexpr auto kind()
     {
         return NodeKind;
@@ -399,25 +422,32 @@ protected:
 namespace dryad
 {
 template <typename T, typename NodeKind>
+bool node_has_kind(const node<NodeKind>* ptr)
+{
+    static_assert(is_node<T, NodeKind>);
+    return T::type_matches_kind(ptr->kind());
+}
+
+template <typename T, typename NodeKind>
 T* node_cast(node<NodeKind>* ptr)
 {
-    static_assert(is_basic_node<T, NodeKind>);
-    DRYAD_PRECONDITION(ptr->kind() == T::kind());
+    static_assert(is_node<T, NodeKind>);
+    DRYAD_PRECONDITION(node_has_kind<T>(ptr));
     return static_cast<T*>(ptr);
 }
 template <typename T, typename NodeKind>
 const T* node_cast(const node<NodeKind>* ptr)
 {
-    static_assert(is_basic_node<T, NodeKind>);
-    DRYAD_PRECONDITION(ptr->kind() == T::kind());
+    static_assert(is_node<T, NodeKind>);
+    DRYAD_PRECONDITION(node_has_kind<T>(ptr));
     return static_cast<const T*>(ptr);
 }
 
 template <typename T, typename NodeKind>
 T* node_try_cast(node<NodeKind>* ptr)
 {
-    static_assert(is_basic_node<T, NodeKind>);
-    if (ptr->kind() == T::kind())
+    static_assert(is_node<T, NodeKind>);
+    if (node_has_kind<T>(ptr))
         return static_cast<T*>(ptr);
     else
         return nullptr;
@@ -425,8 +455,8 @@ T* node_try_cast(node<NodeKind>* ptr)
 template <typename T, typename NodeKind>
 const T* node_try_cast(const node<NodeKind>* ptr)
 {
-    static_assert(is_basic_node<T, NodeKind>);
-    if (ptr->kind() == T::kind())
+    static_assert(is_node<T, NodeKind>);
+    if (node_has_kind<T>(ptr))
         return static_cast<const T*>(ptr);
     else
         return nullptr;

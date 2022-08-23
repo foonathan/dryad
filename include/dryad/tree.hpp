@@ -28,7 +28,7 @@ public:
     template <typename T, typename... Args>
     T* create(Args&&... args)
     {
-        static_assert(is_basic_node<T, NodeKind>);
+        static_assert(is_node<T, NodeKind> && !is_abstract_node<T, NodeKind>);
         static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
 
         return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);
@@ -291,7 +291,7 @@ struct _visit_tree<_detail::node_type_list<NodeTypes...>, Lambdas...>
         {
             auto                  kind = node->kind();
             [[maybe_unused]] auto found_callback
-                = ((kind == NodeTypes::kind()
+                = ((NodeTypes::type_matches_kind(kind)
                         ? call<NodeTypes>(ev, node_cast<NodeTypes>(node), lambdas)
                         : false)
                    || ...);
@@ -302,6 +302,14 @@ struct _visit_tree<_detail::node_type_list<NodeTypes...>, Lambdas...>
     }
 };
 
+/// Traverses the tree invoking the appropriate lambda for each node type.
+///
+/// * If a lambda has signature (traverse_event, NodeType), will invoke it for every NodeType.
+/// * If a lambda has signature (NodeType), will invoke it on enter/leaf events only.
+///
+/// It will try each lambda in the order specified, NodeType can be abstract in which case it
+/// swallows all. Only one lambda will be invoked. If the type of a node does not match any lambda,
+/// it will not be invoked.
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
 void visit(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
 {
@@ -315,6 +323,7 @@ void visit(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
     _visit_tree<node_types, Lambdas...>::visit(tree, DRYAD_FWD(lambdas)...);
 }
 
+/// Same as above, but it is an error if a node cannot be visited.
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
 void visit_all(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
 {

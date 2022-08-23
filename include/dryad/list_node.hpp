@@ -123,8 +123,7 @@ protected:
     using node_base = list_node;
     explicit list_node(node_ctor ctor) : basic_container_node<NodeKind>(ctor)
     {
-        static_assert(std::is_same_v<ChildT, node<node_kind_type>> //
-                      || dryad::is_basic_node<ChildT, node_kind_type>);
+        static_assert(dryad::is_node<ChildT, node_kind_type>);
     }
     ~list_node() = default;
 
