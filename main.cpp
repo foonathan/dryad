@@ -5,8 +5,8 @@
 
 #include <dryad/abstract_node.hpp>
 #include <dryad/node.hpp>
+#include <dryad/optional_node.hpp>
 #include <dryad/tree.hpp>
-#include <dryad/tuple_node.hpp>
 
 enum class node_kind
 {
@@ -31,9 +31,13 @@ struct leaf_node : dryad::basic_node<node, node_kind::leaf>
     }
 };
 
-struct container_node : dryad::single_node<dryad::node<node_kind>, node_kind::container, leaf_node>
+struct container_node
+: dryad::optional_node<dryad::node<node_kind>, node_kind::container, leaf_node>
 {
-    container_node(dryad::node_ctor ctor, leaf_node* a) : node_base(ctor, a) {}
+    container_node(dryad::node_ctor ctor, leaf_node* a) : node_base(ctor)
+    {
+        insert_child(a);
+    }
 };
 
 int main()
