@@ -33,6 +33,7 @@ public:
     //=== modifiers ===//
     void insert_child(ChildT* child)
     {
+        DRYAD_PRECONDITION(child != nullptr && !child->is_linked_in_tree());
         this->insert_first_child(child);
     }
 
@@ -43,9 +44,18 @@ public:
 
     ChildT* replace_child(ChildT* new_child)
     {
-        auto old = this->erase_child_after(nullptr);
-        this->insert_first_child(new_child);
-        return static_cast<ChildT*>(old);
+        DRYAD_PRECONDITION(new_child != nullptr && !new_child->is_linked_in_tree());
+        if (has_child())
+        {
+            auto old = this->erase_child_after(nullptr);
+            this->insert_first_child(new_child);
+            return static_cast<ChildT*>(old);
+        }
+        else
+        {
+            insert_child(new_child);
+            return nullptr;
+        }
     }
 
 protected:

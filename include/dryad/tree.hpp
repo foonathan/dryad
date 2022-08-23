@@ -46,7 +46,10 @@ public:
 
     void set_root(node<NodeKind>* root)
     {
+        DRYAD_PRECONDITION(root != nullptr);
+        DRYAD_PRECONDITION(!root->is_linked_in_tree());
         _root = root;
+        _root->set_next_parent(_root);
     }
 
 private:
@@ -108,7 +111,7 @@ public:
                     _ev = traverse_event::exit;
                 }
             }
-            else if (_cur->next_node() == nullptr)
+            else if (_cur->next_node() == _cur)
             {
                 // We're done.
                 _cur = nullptr;

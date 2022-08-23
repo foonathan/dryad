@@ -48,7 +48,7 @@ struct _list_node_children_range
 
     std::size_t size() const
     {
-        return _self->user_data32();
+        return _size;
     }
 
     iterator begin() const
@@ -66,6 +66,7 @@ struct _list_node_children_range
     }
 
     const node<typename T::node_kind_type>* _self;
+    std::size_t                             _size;
 };
 
 /// Base class for nodes that contain a linked-list of child nodes.
@@ -79,11 +80,11 @@ public:
     //=== access ===//
     _list_node_children_range<ChildT> children()
     {
-        return {this};
+        return {this, this->user_data32()};
     }
     _list_node_children_range<const ChildT> children() const
     {
-        return {this};
+        return {this, this->user_data32()};
     }
 
     //=== modifiers ===//
@@ -91,6 +92,7 @@ public:
 
     iterator insert_front(ChildT* child)
     {
+        DRYAD_PRECONDITION(child != nullptr && !child->is_linked_in_tree());
         if (this->first_child() == nullptr)
             this->insert_first_child(child);
         else
@@ -102,6 +104,7 @@ public:
 
     iterator insert_after(iterator pos, ChildT* child)
     {
+        DRYAD_PRECONDITION(child != nullptr && !child->is_linked_in_tree());
         if (pos._cur == nullptr)
             this->insert_first_child(child);
         else
@@ -115,6 +118,10 @@ public:
     {
         --this->user_data32();
         return static_cast<ChildT*>(this->erase_child_after(pos));
+    }
+    ChildT* erase_front()
+    {
+        return erase_after({});
     }
 
 protected:

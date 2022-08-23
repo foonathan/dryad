@@ -108,11 +108,11 @@ public:
 
     node* next_node()
     {
-        return reinterpret_cast<node*>(_ptr & ~0b111);
+        return reinterpret_cast<node*>(_ptr & ~std::uintptr_t(0b111));
     }
     const node* next_node() const
     {
-        return reinterpret_cast<const node*>(_ptr & ~0b111);
+        return reinterpret_cast<const node*>(_ptr & ~std::uintptr_t(0b111));
     }
 
     bool next_node_is_parent() const
@@ -137,7 +137,7 @@ public:
 
         // If we follow the sibling pointer repeatedly, we end up at the parent eventually.
         auto cur = this;
-        while (!cur->next_is_parent())
+        while (!cur->next_node_is_parent())
             cur = cur->next_node();
         return cur->next_node();
     }
@@ -172,7 +172,7 @@ public:
                 {
                     // We're pointing to the parent, go to first child instead.
                     // As it's a container, this is the ptr user data.
-                    DRYAD_ASSERT(_cur->next_node()->is_container,
+                    DRYAD_ASSERT(_cur->next_node()->is_container(),
                                  "parent node is not a container?!");
                     _cur = _cur->next_node()->first_child();
                 }
@@ -193,7 +193,7 @@ public:
 
         iterator begin() const
         {
-            if (!_self->is_linked_in_tree())
+            if (!_self->is_linked_in_tree() || _self->next_node() == _self)
                 return {};
 
             // We begin with the next node after ours.
@@ -202,7 +202,7 @@ public:
         }
         iterator end() const
         {
-            if (!_self->is_linked_in_tree())
+            if (!_self->is_linked_in_tree() || _self->next_node() == _self)
                 return {};
 
             // We end when we're back at the node.
@@ -233,7 +233,7 @@ public:
     }
     void set_color(dryad::color color)
     {
-        _ptr &= ~0b110;
+        _ptr &= ~std::uintptr_t(0b110);
         _ptr |= (unsigned(color) & 0b11) << 1;
     }
 
@@ -305,6 +305,8 @@ private:
 
     template <typename, typename>
     friend class _container_node;
+    template <typename, typename>
+    friend class tree;
 };
 } // namespace dryad
 

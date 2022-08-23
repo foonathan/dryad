@@ -73,8 +73,8 @@ public:
     {}
 
     arena(arena&& other) noexcept
-    : _cur_block(other._cur_block), _resource(other._resource), _first_block(other._first_block),
-      _cur_pos(other._cur_pos)
+    : _cur_block(other._cur_block), _cur_pos(other._cur_pos), _resource(other._resource),
+      _first_block(other._first_block)
     {
         other._first_block = other._cur_block = nullptr;
         other._cur_pos                        = nullptr;
@@ -167,7 +167,7 @@ public:
         _cur_pos   = m.cur_pos;
     }
 
-    void reset()
+    void clear()
     {
         if (_first_block == nullptr)
             // We never held data to begin with, so don't need to do anything.

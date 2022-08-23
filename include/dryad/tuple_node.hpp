@@ -30,6 +30,7 @@ public:
     //=== modifier ===//
     ChildT* replace_child(ChildT* new_child)
     {
+        DRYAD_PRECONDITION(new_child != nullptr && !new_child->is_linked_in_tree());
         auto old = this->erase_child_after(nullptr);
         this->insert_first_child(new_child);
         return static_cast<ChildT*>(old);
@@ -105,6 +106,7 @@ public:
     //=== modifier ===//
     ChildT* replace_child(std::size_t idx, ChildT* new_child)
     {
+        DRYAD_PRECONDITION(new_child != nullptr && !new_child->is_linked_in_tree());
         _children[idx] = new_child;
 
         if (idx == 0)
@@ -130,7 +132,10 @@ protected:
     {
         auto idx = 0;
         for (auto child : children)
+        {
+            DRYAD_PRECONDITION(child);
             _children[idx++] = child;
+        }
 
         DRYAD_PRECONDITION(children.size() == N);
         this->insert_first_child(*children.begin());
@@ -174,6 +179,7 @@ public:
     template <std::size_t N, typename ChildT>
     ChildT* replace_child(ChildT* new_child)
     {
+        DRYAD_PRECONDITION(new_child != nullptr && !new_child->is_linked_in_tree());
         if constexpr (N == 0)
         {
             auto old = this->erase_child_after(nullptr);
@@ -198,6 +204,7 @@ protected:
     explicit tuple_node(node_ctor ctor, H* head, T*... tail)
     : basic_container_node<AbstractBase, NodeKind>(ctor), _children(tail...)
     {
+        DRYAD_PRECONDITION(((head != nullptr) && ... && (tail != nullptr)));
         this->insert_first_child(head);
 
         auto pos = this->first_child();
