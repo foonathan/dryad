@@ -91,8 +91,6 @@ public:
 
     iterator insert_front(ChildT* child)
     {
-        DRYAD_PRECONDITION(!child->is_linked_in_tree());
-
         if (this->first_child() == nullptr)
             this->insert_first_child(child);
         else
@@ -104,8 +102,6 @@ public:
 
     iterator insert_after(iterator pos, ChildT* child)
     {
-        DRYAD_PRECONDITION(!child->is_linked_in_tree());
-
         if (pos._cur == nullptr)
             this->insert_first_child(child);
         else

@@ -32,7 +32,8 @@ struct leaf_node : dryad::basic_node<node, node_kind::leaf>
     }
 };
 
-struct container_node : dryad::binary_node<dryad::node<node_kind>, node_kind::container, leaf_node>
+struct container_node
+: dryad::tuple_node<dryad::node<node_kind>, node_kind::container, leaf_node, leaf_node>
 {
     container_node(dryad::node_ctor ctor, leaf_node* a, leaf_node* b) : node_base(ctor, a, b) {}
 };
@@ -45,6 +46,9 @@ int main()
     auto b         = tree.create<leaf_node>("b");
     auto c         = tree.create<leaf_node>("c");
     auto container = tree.create<container_node>(a, b);
+    container->replace_child<1>(c);
+    container->replace_child<1>(b);
+    container->replace_child<0>(c);
     tree.set_root(container);
 
     dryad::visit_all(

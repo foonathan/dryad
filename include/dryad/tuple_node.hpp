@@ -12,13 +12,12 @@
 namespace dryad
 {
 /// Base class for nodes that contain a single child.
-///
-/// The child nodes must be given in the constructor and cannot be replaced.
 template <typename AbstractBase, auto NodeKind,
           typename ChildT = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
 class single_node : public basic_container_node<AbstractBase, NodeKind>
 {
 public:
+    //=== access ===//
     ChildT* child()
     {
         return static_cast<ChildT*>(this->first_child());
@@ -26,6 +25,14 @@ public:
     const ChildT* child() const
     {
         return static_cast<const ChildT*>(this->first_child());
+    }
+
+    //=== modifier ===//
+    ChildT* replace_child(ChildT* new_child)
+    {
+        auto old = this->erase_child_after(nullptr);
+        this->insert_first_child(new_child);
+        return static_cast<ChildT*>(old);
     }
 
 protected:
@@ -44,8 +51,6 @@ protected:
 namespace dryad
 {
 /// Base class for nodes that contain N nodes of the specified type.
-///
-/// The child nodes must be given in the constructor and cannot be replaced.
 template <typename AbstractBase, auto NodeKind, std::size_t N,
           typename ChildT = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
 class array_node : public basic_container_node<AbstractBase, NodeKind>
@@ -53,6 +58,7 @@ class array_node : public basic_container_node<AbstractBase, NodeKind>
     static_assert(N >= 1);
 
 public:
+    //=== access ===//
     template <typename T>
     struct _children_range
     {
@@ -96,12 +102,36 @@ public:
         return {this};
     }
 
+    //=== modifier ===//
+    ChildT* replace_child(std::size_t idx, ChildT* new_child)
+    {
+        _children[idx] = new_child;
+
+        if (idx == 0)
+        {
+            auto old = this->erase_child_after(nullptr);
+            this->insert_child_front(new_child);
+            return static_cast<ChildT*>(old);
+        }
+        else
+        {
+            auto pos = _children[idx - 1];
+            auto old = this->erase_child_after(pos);
+            this->insert_child_after(pos, new_child);
+            return static_cast<ChildT*>(old);
+        }
+    }
+
 protected:
     using node_base = array_node;
 
     explicit array_node(node_ctor ctor, std::initializer_list<ChildT*> children)
     : basic_container_node<AbstractBase, NodeKind>(ctor)
     {
+        auto idx = 0;
+        for (auto child : children)
+            _children[idx++] = child;
+
         DRYAD_PRECONDITION(children.size() == N);
         this->insert_first_child(*children.begin());
         for (auto iter = children.begin(); iter != children.end() - 1; ++iter)
@@ -118,12 +148,11 @@ private:
 namespace dryad
 {
 /// Base class for nodes that contain the specified child types.
-///
-/// The child nodes must be given in the constructor and cannot be replaced.
 template <typename AbstractBase, auto NodeKind, typename HeadChildT, typename... TailChildTs>
 class tuple_node : public basic_container_node<AbstractBase, NodeKind>
 {
 public:
+    //=== access ===//
     template <std::size_t N>
     auto child()
     {
@@ -139,6 +168,27 @@ public:
             return static_cast<const HeadChildT*>(this->first_child());
         else
             return DRAYD_AS_CONST(_children.template get<N - 1>());
+    }
+
+    //=== modifiers ===//
+    template <std::size_t N, typename ChildT>
+    ChildT* replace_child(ChildT* new_child)
+    {
+        if constexpr (N == 0)
+        {
+            auto old = this->erase_child_after(nullptr);
+            this->insert_child_front(new_child);
+            return static_cast<ChildT*>(old);
+        }
+        else
+        {
+            _children.template get<N - 1>() = new_child;
+
+            auto pos = child<N - 1>();
+            auto old = this->erase_child_after(pos);
+            this->insert_child_after(pos, new_child);
+            return static_cast<ChildT*>(old);
+        }
     }
 
 protected:
@@ -164,6 +214,7 @@ template <typename AbstractBase, auto NodeKind, typename LeftChild, typename Rig
 class binary_node : public tuple_node<AbstractBase, NodeKind, LeftChild, RightChild>
 {
 public:
+    //=== access ===//
     LeftChild* left_child()
     {
         return this->template child<0>();
@@ -180,6 +231,16 @@ public:
     const RightChild* right_child() const
     {
         return this->template child<1>();
+    }
+
+    //=== modifiers ===//
+    LeftChild* replace_left_child(LeftChild* new_child)
+    {
+        return this->template replace_child<0>(new_child);
+    }
+    RightChild* replace_right_child(RightChild* new_child)
+    {
+        return this->template replace_child<1>(new_child);
     }
 
 protected:

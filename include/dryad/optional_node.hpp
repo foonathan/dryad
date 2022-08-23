@@ -41,6 +41,13 @@ public:
         return static_cast<ChildT*>(this->erase_child_after(nullptr));
     }
 
+    ChildT* replace_child(ChildT* new_child)
+    {
+        auto old = this->erase_child_after(nullptr);
+        this->insert_first_child(new_child);
+        return static_cast<ChildT*>(old);
+    }
+
 protected:
     using node_base = optional_node;
 
