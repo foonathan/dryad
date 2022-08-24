@@ -16,6 +16,3 @@ if(CMAKE_CURRENT_SOURCE_DIR STREQUAL CMAKE_SOURCE_DIR)
     endif()
 endif()
 
-add_executable(dryad_prototype main.cpp)
-target_link_libraries(dryad_prototype PRIVATE foonathan::dryad)
-
