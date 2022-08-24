@@ -190,18 +190,18 @@ private:
     iterator _begin, _end;
 
     template <typename NodeKind>
-    friend auto traverse(node<NodeKind>* n);
+    friend _traverse_range<node<NodeKind>> traverse(node<NodeKind>* n);
     template <typename NodeKind>
-    friend auto traverse(const node<NodeKind>* n);
+    friend _traverse_range<node<NodeKind>> traverse(const node<NodeKind>* n);
 };
 
 template <typename NodeKind>
-auto traverse(node<NodeKind>* n)
+_traverse_range<node<NodeKind>> traverse(node<NodeKind>* n)
 {
     return _traverse_range<node<NodeKind>>(n);
 }
 template <typename NodeKind>
-auto traverse(const node<NodeKind>* n)
+_traverse_range<node<NodeKind>> traverse(const node<NodeKind>* n)
 {
     return _traverse_range<node<NodeKind>>(n);
 }

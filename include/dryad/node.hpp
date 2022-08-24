@@ -268,7 +268,8 @@ protected:
 protected:
     explicit node(node_ctor, NodeKind kind)
     : _ptr(reinterpret_cast<std::uintptr_t>((node*)nullptr)), _is_container(false),
-      _kind(_traits::to_int(kind)), _user_data16(0), _user_data32(0), _user_data_ptr(nullptr)
+      _kind(_traits::to_int(kind) & 0x7FFF), _user_data16(0), _user_data32(0),
+      _user_data_ptr(nullptr)
     {}
     ~node() = default;
 

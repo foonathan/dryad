@@ -8,7 +8,7 @@
 
 TEST_CASE("arena")
 {
-    dryad::arena arena;
+    dryad::arena<> arena;
 
     SUBCASE("basic")
     {

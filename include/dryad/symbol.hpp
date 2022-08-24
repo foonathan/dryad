@@ -217,7 +217,11 @@ private:
 
         auto result = fnv_basis;
         for (; *str != CharT(0); ++str)
-            result = (result ^ std::uint64_t(*str)) * fnv_prime;
+        {
+            auto byte = static_cast<std::make_unsigned_t<CharT>>(*str);
+            result ^= byte;
+            result *= fnv_prime;
+        }
         return result;
     }
 
