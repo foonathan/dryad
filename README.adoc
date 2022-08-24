@@ -1,0 +1,20 @@
+= dryad
+
+ifdef::env-github[]
+image:https://github.com/foonathan/dryad/workflows/CI/badge.svg[Build Status]
+endif::[]
+
+dryad is a work-in-progress library with useful data structures for compiler ASTs.
+It is currently highly unstable, not ready for production use, and does not support anything other than a gcc/clang.
+
+It is developed for my clauf C compiler development: https://github.com/foonathan/clauf.
+
+== Features
+
+* Utilities for AST classes.
+* String interning.
+
+== Documentation
+
+Currently no documentation; you shouldn't use it yet.
+
