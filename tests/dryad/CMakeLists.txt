@@ -12,7 +12,8 @@ set(tests
         node.cpp
         optional_node.cpp
         tree.cpp
-        tuple_node.cpp)
+        tuple_node.cpp
+        symbol.cpp)
 
 add_executable(dryad_test ${tests})
 target_link_libraries(dryad_test PRIVATE dryad_test_base)

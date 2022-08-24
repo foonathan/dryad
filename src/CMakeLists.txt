@@ -15,6 +15,7 @@ set(header_files
         ${include_dir}/list_node.hpp
         ${include_dir}/node.hpp
         ${include_dir}/optional_node.hpp
+        ${include_dir}/symbol.hpp
         ${include_dir}/tree.hpp
         ${include_dir}/tuple_node.hpp)
 

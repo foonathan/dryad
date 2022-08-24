@@ -3,57 +3,15 @@
 
 #include <cstdio>
 
-#include <dryad/abstract_node.hpp>
-#include <dryad/node.hpp>
-#include <dryad/optional_node.hpp>
-#include <dryad/tree.hpp>
-#include <dryad/tuple_node.hpp>
-
-enum class node_kind
-{
-    container,
-    leaf
-};
-
-struct node : dryad::abstract_node_all<node_kind>
-{
-    DRYAD_ATTRIBUTE_USER_DATA16(short, foo);
-
-    DRYAD_ABSTRACT_NODE_CTOR(node)
-};
-
-struct leaf_node : dryad::basic_node<node, node_kind::leaf>
-{
-    DRYAD_ATTRIBUTE_USER_DATA_PTR(const char*, msg);
-
-    leaf_node(dryad::node_ctor ctor, const char* msg) : node_base(ctor)
-    {
-        set_msg(msg);
-    }
-};
-
-struct container_node
-: dryad::tuple_node<dryad::node<node_kind>, node_kind::container, leaf_node, leaf_node>
-{
-    container_node(dryad::node_ctor ctor, leaf_node* a, leaf_node* b) : node_base(ctor, a, b) {}
-};
+#include <dryad/symbol.hpp>
 
 int main()
 {
-    dryad::tree<node_kind> tree;
+    dryad::symbol_interner<0, char, unsigned> symbols;
 
-    auto a         = tree.create<leaf_node>("a");
-    auto b         = tree.create<leaf_node>("b");
-    auto c         = tree.create<leaf_node>("c");
-    auto container = tree.create<container_node>(a, b);
-    container->replace_child<1>(c);
-    container->replace_child<1>(b);
-    container->replace_child<0>(c);
-    tree.set_root(container);
-
-    dryad::visit_all(
-        tree, //
-        [](container_node*) { std::puts("container"); },
-        [](leaf_node* node) { std::puts(node->msg()); });
+    auto a1 = symbols.intern("a");
+    auto a2 = symbols.intern("a");
+    auto b  = symbols.intern("b");
+    std::printf("%d %d %d\n", a1.id(), a2.id(), b.id());
 }
 
