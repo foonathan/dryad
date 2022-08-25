@@ -31,7 +31,7 @@ public:
     {
         DRYAD_PRECONDITION(new_child != nullptr && !new_child->is_linked_in_tree());
         auto old = this->erase_child_after(nullptr);
-        this->insert_first_child(new_child);
+        this->insert_child_after(nullptr, new_child);
         return static_cast<ChildT*>(old);
     }
 
@@ -41,7 +41,7 @@ protected:
     explicit single_node(node_ctor ctor, typename AbstractBase::node_kind_type kind, ChildT* child)
     : container_node<AbstractBase>(ctor, kind)
     {
-        this->insert_first_child(child);
+        this->insert_child_after(nullptr, child);
     }
 
     ~single_node() = default;
@@ -108,19 +108,10 @@ public:
         DRYAD_PRECONDITION(new_child != nullptr && !new_child->is_linked_in_tree());
         _children[idx] = new_child;
 
-        if (idx == 0)
-        {
-            auto old = this->erase_child_after(nullptr);
-            this->insert_child_front(new_child);
-            return static_cast<ChildT*>(old);
-        }
-        else
-        {
-            auto pos = _children[idx - 1];
-            auto old = this->erase_child_after(pos);
-            this->insert_child_after(pos, new_child);
-            return static_cast<ChildT*>(old);
-        }
+        auto pos = idx == 0 ? nullptr : _children[idx - 1];
+        auto old = this->erase_child_after(pos);
+        this->insert_child_after(pos, new_child);
+        return static_cast<ChildT*>(old);
     }
 
 protected:
@@ -138,7 +129,7 @@ protected:
         }
 
         DRYAD_PRECONDITION(children.size() == N);
-        this->insert_first_child(*children.begin());
+        this->insert_child_after(nullptr, *children.begin());
         for (auto iter = children.begin(); iter != children.end() - 1; ++iter)
             this->insert_child_after(iter[0], iter[1]);
     }
@@ -183,7 +174,7 @@ public:
         if constexpr (N == 0)
         {
             auto old = this->erase_child_after(nullptr);
-            this->insert_child_front(new_child);
+            this->insert_child_after(nullptr, new_child);
             return static_cast<ChildT*>(old);
         }
         else
@@ -206,7 +197,7 @@ protected:
     : container_node<AbstractBase>(ctor, kind), _children(tail...)
     {
         DRYAD_PRECONDITION(((head != nullptr) && ... && (tail != nullptr)));
-        this->insert_first_child(head);
+        this->insert_child_after(nullptr, head);
 
         auto pos = this->first_child();
         ((this->insert_child_after(pos, tail), pos = tail), ...);

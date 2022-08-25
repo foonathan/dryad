@@ -394,8 +394,6 @@ protected:
 namespace dryad
 {
 /// Base class for all nodes that own child nodes, which should be traversed.
-/// This is just an implementation detail that is not relevant unless you implement your own
-/// containers.
 template <typename AbstractBase>
 class container_node : public AbstractBase
 {
@@ -403,26 +401,24 @@ public:
     using node_kind_type = typename AbstractBase::node_kind_type;
 
 protected:
-    void insert_first_child(node<node_kind_type>* child)
-    {
-        DRYAD_PRECONDITION(!child->is_linked_in_tree());
-        DRYAD_PRECONDITION(this->first_child() == nullptr);
-        child->set_next_parent(this);
-        this->user_data_ptr() = child;
-    }
-    void insert_child_front(node<node_kind_type>* child)
-    {
-        DRYAD_PRECONDITION(!child->is_linked_in_tree());
-        DRYAD_PRECONDITION(this->first_child() != nullptr);
-        child->set_next_sibling(this->first_child());
-        this->user_data_ptr() = child;
-    }
     void insert_child_after(node<node_kind_type>* pos, node<node_kind_type>* child)
     {
         DRYAD_PRECONDITION(!child->is_linked_in_tree());
-        DRYAD_PRECONDITION(this->first_child() != nullptr);
-        child->copy_next(pos);
-        pos->set_next_sibling(child);
+
+        if (pos == nullptr)
+        {
+            if (this->first_child() == nullptr)
+                child->set_next_parent(this);
+            else
+                child->set_next_sibling(this->first_child());
+
+            this->user_data_ptr() = child;
+        }
+        else
+        {
+            child->copy_next(pos);
+            pos->set_next_sibling(child);
+        }
     }
 
     node<node_kind_type>* erase_child_after(node<node_kind_type>* pos)

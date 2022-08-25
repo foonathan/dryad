@@ -33,7 +33,7 @@ public:
     void insert_child(ChildT* child)
     {
         DRYAD_PRECONDITION(child != nullptr && !child->is_linked_in_tree());
-        this->insert_first_child(child);
+        this->insert_child_after(nullptr, child);
     }
 
     ChildT* erase_child()
@@ -47,7 +47,7 @@ public:
         if (has_child())
         {
             auto old = this->erase_child_after(nullptr);
-            this->insert_first_child(new_child);
+            this->insert_child_after(nullptr, new_child);
             return static_cast<ChildT*>(old);
         }
         else
