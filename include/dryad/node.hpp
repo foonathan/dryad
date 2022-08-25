@@ -613,5 +613,65 @@ const T* node_try_cast(const node<NodeKind>* ptr)
 }
 } // namespace dryad
 
+namespace dryad
+{
+template <typename NodeIterator, typename NodeType = typename NodeIterator::value_type>
+struct node_range
+{
+    NodeIterator _begin;
+    NodeIterator _end;
+
+    node_range(NodeIterator begin, NodeIterator end) : _begin(begin), _end(end) {}
+
+    struct iterator : _detail::forward_iterator_base<iterator, NodeType*, NodeType*, void>
+    {
+        NodeIterator _cur;
+
+        NodeType* deref() const
+        {
+            return node_cast<NodeType>(*_cur);
+        }
+        void increment()
+        {
+            ++_cur;
+        }
+        bool equal(iterator rhs) const
+        {
+            return _cur == rhs._cur;
+        }
+    };
+
+    bool empty() const
+    {
+        return _begin == _end;
+    }
+
+    iterator begin() const
+    {
+        return {{}, _begin};
+    }
+    iterator end() const
+    {
+        return {{}, _end};
+    }
+
+    NodeType* front() const
+    {
+        return *begin();
+    }
+};
+
+template <typename NodeIterator>
+auto make_node_range(NodeIterator begin, NodeIterator end)
+{
+    return node_range<NodeIterator>(begin, end);
+}
+template <typename NodeType, typename NodeIterator>
+auto make_node_range(NodeIterator begin, NodeIterator end)
+{
+    return node_range<NodeIterator, NodeType>(begin, end);
+}
+} // namespace dryad
+
 #endif // DRYAD_NODE_HPP_INCLUDED
 

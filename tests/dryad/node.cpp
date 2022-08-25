@@ -31,6 +31,12 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
     {
         this->insert_children_after(nullptr, ns...);
     }
+
+    auto children()
+    {
+        auto node_children = node_base::children();
+        return dryad::make_node_range<leaf_node>(node_children.begin(), node_children.end());
+    }
 };
 } // namespace
 
@@ -58,13 +64,25 @@ TEST_CASE("node")
     node->set_color(dryad::color::black);
     CHECK(node->color() == dryad::color::black);
 
-    for (auto child : dryad::node_cast<container_node>(node)->children())
+    for (auto child : node->children())
     {
         CHECK(child->parent() == node);
 
         auto siblings = child->siblings();
         auto dist     = std::distance(siblings.begin(), siblings.end());
         CHECK(dist == 2);
+
+        CHECK(child->children().empty());
+    }
+    for (leaf_node* child : dryad::node_cast<container_node>(node)->children())
+    {
+        CHECK(child->parent() == node);
+
+        auto siblings = child->siblings();
+        auto dist     = std::distance(siblings.begin(), siblings.end());
+        CHECK(dist == 2);
+
+        CHECK(child->children().empty());
     }
 }
 
