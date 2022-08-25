@@ -121,15 +121,6 @@ public:
         return (_ptr & 0b1) != 0;
     }
 
-    node<NodeKind>* first_child()
-    {
-        return _is_container ? static_cast<node<NodeKind>*>(_user_data_ptr) : nullptr;
-    }
-    const node<NodeKind>* first_child() const
-    {
-        return _is_container ? static_cast<const node<NodeKind>*>(_user_data_ptr) : nullptr;
-    }
-
     /// Root node returns a pointer to itself.
     const node* parent() const
     {
@@ -159,10 +150,6 @@ public:
                 return {_cur};
             }
 
-            operator T*() const
-            {
-                return _cur;
-            }
             T* deref() const
             {
                 return _cur;
@@ -173,9 +160,8 @@ public:
                 {
                     // We're pointing to the parent, go to first child instead.
                     // As it's a container, this is the ptr user data.
-                    DRYAD_ASSERT(_cur->next_node()->is_container(),
-                                 "parent node is not a container?!");
-                    _cur = _cur->next_node()->first_child();
+                    DRYAD_ASSERT(!_cur->next_node()->children().empty(), "parent node is empty?!");
+                    _cur = *_cur->next_node()->children().begin();
                 }
                 else
                     // We're pointing to a sibling, go there.
@@ -222,9 +208,64 @@ public:
         return {this};
     }
 
-    bool is_container() const
+    template <typename T>
+    struct _children_range
     {
-        return _is_container;
+        const node* _self;
+
+        struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
+        {
+            T* _cur = nullptr;
+
+            operator typename _children_range<const T>::iterator() const
+            {
+                return {_cur};
+            }
+
+            T* deref() const
+            {
+                return (T*)_cur;
+            }
+            void increment()
+            {
+                _cur = _cur->next_node();
+            }
+            bool equal(iterator rhs) const
+            {
+                return _cur == rhs._cur;
+            }
+        };
+
+        bool empty() const
+        {
+            return _self->_is_container ? _self->_user_data_ptr == nullptr : true;
+        }
+
+        iterator begin()
+        {
+            if (!empty())
+                return {{}, static_cast<T*>(_self->_user_data_ptr)};
+            else
+                return {{}, nullptr};
+        }
+        iterator end()
+        {
+            if (!empty())
+                // The last child has a pointer back to self.
+                return {{}, _self};
+            else
+                // begin() == nullptr, so return that as well.
+                return {{}, nullptr};
+        }
+    };
+
+    _children_range<node> children()
+    {
+        return {this};
+    }
+    _children_range<const node> children() const
+    {
+        return {this};
     }
 
     //=== color ===//
@@ -407,10 +448,10 @@ protected:
 
         if (pos == nullptr)
         {
-            if (this->first_child() == nullptr)
+            if (this->user_data_ptr() == nullptr)
                 child->set_next_parent(this);
             else
-                child->set_next_sibling(this->first_child());
+                child->set_next_sibling(static_cast<node<node_kind_type>*>(this->user_data_ptr()));
 
             this->user_data_ptr() = child;
         }
@@ -425,7 +466,7 @@ protected:
     {
         if (pos == nullptr)
         {
-            auto child = this->first_child();
+            auto child = static_cast<node<node_kind_type>*>(this->user_data_ptr());
 
             if (child->next_node_is_parent())
                 this->user_data_ptr() = nullptr;

@@ -19,11 +19,11 @@ public:
     //=== access ===//
     ChildT* child()
     {
-        return static_cast<ChildT*>(this->first_child());
+        return static_cast<ChildT*>(*this->children().begin());
     }
     const ChildT* child() const
     {
-        return static_cast<const ChildT*>(this->first_child());
+        return static_cast<const ChildT*>(*this->children().begin());
     }
 
     //=== modifier ===//
@@ -153,7 +153,7 @@ public:
     auto child()
     {
         if constexpr (N == 0)
-            return static_cast<HeadChildT*>(this->first_child());
+            return static_cast<HeadChildT*>(*this->children().begin());
         else
             return _children.template get<N - 1>();
     }
@@ -161,7 +161,7 @@ public:
     auto child() const
     {
         if constexpr (N == 0)
-            return static_cast<const HeadChildT*>(this->first_child());
+            return static_cast<const HeadChildT*>(this->children().begin());
         else
             return DRAYD_AS_CONST(_children.template get<N - 1>());
     }
@@ -199,7 +199,7 @@ protected:
         DRYAD_PRECONDITION(((head != nullptr) && ... && (tail != nullptr)));
         this->insert_child_after(nullptr, head);
 
-        auto pos = this->first_child();
+        auto pos = *this->children().begin();
         ((this->insert_child_after(pos, tail), pos = tail), ...);
     }
 

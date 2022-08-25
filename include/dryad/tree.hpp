@@ -94,16 +94,18 @@ public:
         {
             if (_ev == traverse_event::enter)
             {
-                auto child = _cur->first_child();
-                if (child != nullptr)
+                auto children = _cur->children();
+                if (!children.empty())
                 {
                     // We go to the first child next.
-                    if (child->is_container())
+                    auto first_child = *children.begin();
+                    if (auto first_grandchildren = first_child->children();
+                        !first_grandchildren.empty())
                         _ev = traverse_event::enter;
                     else
                         _ev = traverse_event::leaf;
 
-                    _cur = child;
+                    _cur = first_child;
                 }
                 else
                 {
@@ -124,7 +126,7 @@ public:
                 if (_cur->next_node_is_parent())
                     // We go back to a production for the second time.
                     _ev = traverse_event::exit;
-                else if (_cur->next_node()->is_container())
+                else if (!_cur->next_node()->children().empty())
                     // We're having a production as sibling.
                     _ev = traverse_event::enter;
                 else
@@ -168,7 +170,7 @@ private:
         if (node == nullptr)
             return;
 
-        if (node->is_container())
+        if (auto children = node->children(); !children.empty())
         {
             _begin._cur = node;
             _begin._ev  = traverse_event::enter;

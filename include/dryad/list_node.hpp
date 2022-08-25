@@ -43,7 +43,7 @@ struct _list_node_children_range
 
     bool empty() const
     {
-        return _self->first_child() == nullptr;
+        return _self->children().empty();
     }
 
     std::size_t size() const
@@ -53,7 +53,7 @@ struct _list_node_children_range
 
     iterator begin() const
     {
-        return {{}, _self->first_child()};
+        return {{}, *_self->children().begin()};
     }
     iterator end() const
     {

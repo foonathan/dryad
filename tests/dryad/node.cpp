@@ -51,7 +51,6 @@ TEST_CASE("node")
     CHECK(node->is_linked_in_tree());
     CHECK(node->parent() == node);
     CHECK(node->siblings().empty());
-    CHECK(node->is_container());
 
     node->set_color(dryad::color::black);
     CHECK(node->color() == dryad::color::black);

@@ -17,16 +17,16 @@ public:
     //=== access ===//
     bool has_child() const
     {
-        return this->first_child() != nullptr;
+        return !this->children().empty();
     }
 
     ChildT* child()
     {
-        return static_cast<ChildT*>(this->first_child());
+        return static_cast<ChildT*>(*this->children().begin());
     }
     const ChildT* child() const
     {
-        return static_cast<const ChildT*>(this->first_child());
+        return static_cast<const ChildT*>(*this->children().begin());
     }
 
     //=== modifiers ===//
