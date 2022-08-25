@@ -14,11 +14,26 @@ TEST_CASE("symbol_interner")
     {
         symbols.reserve(10, 3);
     }
+    SUBCASE("move assign")
+    {
+        symbols.intern("hello");
+        symbols.intern("world");
+
+        dryad::symbol_interner<void> other;
+        other.reserve(10, 3);
+        symbols = DRYAD_MOV(other);
+    }
 
     auto abc1 = symbols.intern("abc");
     auto abc2 = symbols.intern("abc");
     CHECK(abc1 == abc2);
     CHECK(abc1.c_str(symbols) == doctest::String("abc"));
+
+    SUBCASE("move construct")
+    {
+        auto other = DRYAD_MOV(symbols);
+        symbols    = DRYAD_MOV(other);
+    }
 
     auto def = symbols.intern("def");
     CHECK(def != abc1);

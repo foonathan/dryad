@@ -252,13 +252,25 @@ public:
     constexpr symbol_interner() : _resource(_detail::get_memory_resource<MemoryResource>()) {}
     constexpr explicit symbol_interner(MemoryResource* resource) : _resource(resource) {}
 
-    symbol_interner(const symbol_interner&)            = delete;
-    symbol_interner& operator=(const symbol_interner&) = delete;
-
     ~symbol_interner() noexcept
     {
         _buffer.free(_resource);
         _map.free(_resource);
+    }
+
+    symbol_interner(symbol_interner&& other) noexcept
+    : _buffer(other._buffer), _map(other._map), _resource(other._resource)
+    {
+        other._buffer = {};
+        other._map    = {};
+    }
+
+    symbol_interner& operator=(symbol_interner&& other) noexcept
+    {
+        _detail::swap(_buffer, other._buffer);
+        _detail::swap(_map, other._map);
+        _detail::swap(_resource, other._resource);
+        return *this;
     }
 
     //=== interning ===//
