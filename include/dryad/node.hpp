@@ -7,7 +7,6 @@
 #include <dryad/_detail/assert.hpp>
 #include <dryad/_detail/config.hpp>
 #include <dryad/_detail/iterator.hpp>
-#include <initializer_list>
 
 namespace dryad
 {
@@ -107,20 +106,6 @@ public:
         return next_node() != nullptr;
     }
 
-    node* next_node()
-    {
-        return reinterpret_cast<node*>(_ptr & ~std::uintptr_t(0b111));
-    }
-    const node* next_node() const
-    {
-        return reinterpret_cast<const node*>(_ptr & ~std::uintptr_t(0b111));
-    }
-
-    bool next_node_is_parent() const
-    {
-        return (_ptr & 0b1) != 0;
-    }
-
     /// Root node returns a pointer to itself.
     const node* parent() const
     {
@@ -141,9 +126,16 @@ public:
     template <typename T>
     struct _sibling_range
     {
+        const node* _self;
+
         struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
         {
             T* _cur = nullptr;
+
+            static iterator from_ptr(T* ptr)
+            {
+                return {ptr};
+            }
 
             operator typename _sibling_range<const T>::iterator() const
             {
@@ -196,7 +188,10 @@ public:
             return {{}, (node<NodeKind>*)_self};
         }
 
-        const node* _self;
+        T* front() const
+        {
+            return *begin();
+        }
     };
 
     _sibling_range<node<NodeKind>> siblings()
@@ -216,6 +211,11 @@ public:
         struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
         {
             T* _cur = nullptr;
+
+            static iterator from_ptr(T* ptr)
+            {
+                return {ptr};
+            }
 
             operator typename _children_range<const T>::iterator() const
             {
@@ -241,21 +241,26 @@ public:
             return _self->_is_container ? _self->_user_data_ptr == nullptr : true;
         }
 
-        iterator begin()
+        iterator begin() const
         {
-            if (!empty())
-                return {{}, static_cast<T*>(_self->_user_data_ptr)};
-            else
+            if (empty())
                 return {{}, nullptr};
-        }
-        iterator end()
-        {
-            if (!empty())
-                // The last child has a pointer back to self.
-                return {{}, const_cast<T*>(_self)};
             else
+                return {{}, static_cast<T*>(_self->_user_data_ptr)};
+        }
+        iterator end() const
+        {
+            if (empty())
                 // begin() == nullptr, so return that as well.
                 return {{}, nullptr};
+            else
+                // The last child has a pointer back to self.
+                return {{}, const_cast<T*>(_self)};
+        }
+
+        T* front() const
+        {
+            return *begin();
         }
     };
 
@@ -266,6 +271,11 @@ public:
     _children_range<const node> children() const
     {
         return {this};
+    }
+
+    bool has_children() const
+    {
+        return !children().empty();
     }
 
     //=== color ===//
@@ -332,6 +342,15 @@ private:
         _ptr = copy_from->_ptr;
     }
 
+    node* next_node() const
+    {
+        return reinterpret_cast<node*>(_ptr & ~std::uintptr_t(0b111));
+    }
+    bool next_node_is_parent() const
+    {
+        return (_ptr & 0b1) != 0;
+    }
+
     // If part of a tree, ptr points to either sibling or parent.
     // For root node, it is a parent pointer to itself.
     // If not part of a tree, ptr is nullptr.
@@ -350,6 +369,8 @@ private:
     friend class container_node;
     template <typename, typename>
     friend class tree;
+    template <typename>
+    friend class _traverse_range;
 };
 } // namespace dryad
 
@@ -383,10 +404,6 @@ protected:
     template <typename... Args>
     explicit basic_node(node_ctor ctor, Args&&... args)
     : AbstractBase(ctor, kind(), DRYAD_FWD(args)...)
-    {}
-    template <typename T>
-    explicit basic_node(node_ctor ctor, std::initializer_list<T> list)
-    : AbstractBase(ctor, kind(), list)
     {}
 
     ~basic_node() = default;

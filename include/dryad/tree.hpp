@@ -94,13 +94,11 @@ public:
         {
             if (_ev == traverse_event::enter)
             {
-                auto children = _cur->children();
-                if (!children.empty())
+                if (_cur->has_children())
                 {
                     // We go to the first child next.
-                    auto first_child = *children.begin();
-                    if (auto first_grandchildren = first_child->children();
-                        !first_grandchildren.empty())
+                    auto first_child = _cur->children().front();
+                    if (first_child->has_children())
                         _ev = traverse_event::enter;
                     else
                         _ev = traverse_event::leaf;
@@ -124,13 +122,13 @@ public:
                 // We follow the next pointer.
 
                 if (_cur->next_node_is_parent())
-                    // We go back to a production for the second time.
+                    // We go back to a container for the second time.
                     _ev = traverse_event::exit;
-                else if (!_cur->next_node()->children().empty())
-                    // We're having a production as sibling.
+                else if (_cur->next_node()->has_children())
+                    // We're having a container as sibling.
                     _ev = traverse_event::enter;
                 else
-                    // Token as sibling.
+                    // Non-container as sibling.
                     _ev = traverse_event::leaf;
 
                 _cur = _cur->next_node();
@@ -170,7 +168,7 @@ private:
         if (node == nullptr)
             return;
 
-        if (auto children = node->children(); !children.empty())
+        if (node->has_children())
         {
             _begin._cur = node;
             _begin._ev  = traverse_event::enter;
