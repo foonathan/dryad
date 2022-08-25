@@ -233,10 +233,10 @@ private:
 
 namespace dryad
 {
-template <auto Id, typename IndexType = std::size_t>
+template <typename Id, typename IndexType = std::size_t>
 class symbol;
 
-template <auto Id, typename CharT = char, typename IndexType = std::size_t,
+template <typename Id, typename CharT = char, typename IndexType = std::size_t,
           typename MemoryResource = void>
 class symbol_interner
 {
@@ -307,7 +307,7 @@ private:
 
 namespace dryad
 {
-template <auto Id, typename IndexType>
+template <typename Id, typename IndexType>
 class symbol
 {
     static_assert(std::is_unsigned_v<IndexType>);
@@ -366,7 +366,7 @@ private:
 
     IndexType _index;
 
-    template <auto, typename, typename, typename>
+    template <typename, typename, typename, typename>
     friend class symbol_interner;
 };
 } // namespace dryad

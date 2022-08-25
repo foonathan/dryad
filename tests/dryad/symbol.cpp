@@ -8,7 +8,7 @@
 
 TEST_CASE("symbol_interner")
 {
-    dryad::symbol_interner<0> symbols;
+    dryad::symbol_interner<void> symbols;
 
     SUBCASE("reserve")
     {
