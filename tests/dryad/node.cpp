@@ -26,9 +26,10 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
 {
     DRYAD_NODE_CTOR(container_node);
 
-    void insert_front(node* n)
+    template <typename... Children>
+    void insert_front(Children*... ns)
     {
-        this->insert_child_after(nullptr, n);
+        this->insert_children_after(nullptr, ns...);
     }
 };
 } // namespace
@@ -43,9 +44,7 @@ TEST_CASE("node")
         auto c = tree.create<leaf_node>();
 
         auto container = tree.create<container_node>();
-        container->insert_front(c);
-        container->insert_front(b);
-        container->insert_front(a);
+        container->insert_front(a, b, c);
         tree.set_root(container);
 
         return tree;

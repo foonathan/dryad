@@ -326,6 +326,10 @@ protected:
     ~node() = default;
 
 private:
+    void unlink()
+    {
+        _ptr = reinterpret_cast<std::uintptr_t>((node*)nullptr);
+    }
     void set_next_sibling(node* node)
     {
         _ptr = reinterpret_cast<std::uintptr_t>(node);
@@ -455,22 +459,31 @@ namespace dryad
 template <typename AbstractBase>
 class container_node : public AbstractBase
 {
+    using _node = node<typename AbstractBase::node_kind_type>;
+
 public:
     using node_kind_type = typename AbstractBase::node_kind_type;
 
 protected:
-    void insert_child_after(node<node_kind_type>* pos, node<node_kind_type>* child)
+    explicit container_node(node_ctor ctor, node_kind_type kind) : AbstractBase(ctor, kind)
+    {
+        this->_is_container = true;
+    }
+    ~container_node() = default;
+
+    //=== modifiers ===//
+    void insert_child_after(_node* pos, _node* child)
     {
         DRYAD_PRECONDITION(!child->is_linked_in_tree());
 
         if (pos == nullptr)
         {
-            if (this->user_data_ptr() == nullptr)
-                child->set_next_parent(this);
+            if (auto first = first_child())
+                child->set_next_sibling(first);
             else
-                child->set_next_sibling(static_cast<node<node_kind_type>*>(this->user_data_ptr()));
+                child->set_next_parent(this);
 
-            this->user_data_ptr() = child;
+            set_first_child(child);
         }
         else
         {
@@ -478,43 +491,81 @@ protected:
             pos->set_next_sibling(child);
         }
     }
+    template <typename... T>
+    void insert_children_after(_node* pos, T*... children)
+    {
+        ((insert_child_after(pos, children), pos = children), ...);
+    }
 
-    node<node_kind_type>* erase_child_after(node<node_kind_type>* pos)
+    /// Returns the child that was erased.
+    _node* erase_child_after(_node* pos)
     {
         if (pos == nullptr)
         {
-            auto child = static_cast<node<node_kind_type>*>(this->user_data_ptr());
+            DRYAD_PRECONDITION(first_child() != nullptr);
+            auto child = first_child();
 
             if (child->next_node_is_parent())
-                this->user_data_ptr() = nullptr;
+                set_first_child(nullptr);
             else
-                this->user_data_ptr() = child->next_node();
+                set_first_child(child->next_node());
 
-            child->set_next_sibling(nullptr);
+            child->unlink();
             return child;
         }
         else
         {
             DRYAD_PRECONDITION(!pos->next_node_is_parent());
             auto child = pos->next_node();
+
             pos->copy_next(child);
-            child->set_next_sibling(nullptr);
+
+            child->unlink();
             return child;
         }
     }
 
-protected:
-    explicit container_node(node_ctor ctor, node_kind_type kind) : AbstractBase(ctor, kind)
+    /// Returns the previous child.
+    _node* replace_child_after(_node* pos, _node* new_child)
     {
-        this->_is_container = true;
+        DRYAD_PRECONDITION(!new_child->is_linked_in_tree());
+
+        if (pos == nullptr)
+        {
+            DRYAD_PRECONDITION(first_child());
+            auto old_child = first_child();
+
+            new_child->copy_next(old_child);
+            set_first_child(new_child);
+
+            old_child->unlink();
+            return old_child;
+        }
+        else
+        {
+            DRYAD_PRECONDITION(!pos->next_node_is_parent());
+            auto old_child = pos->next_node();
+
+            new_child->copy_next(old_child);
+            pos->set_next_sibling(new_child);
+
+            old_child->unlink();
+            return old_child;
+        }
     }
 
-    ~container_node() = default;
-
 private:
-    using node<node_kind_type>::user_data_ptr;
+    _node* first_child() const
+    {
+        return static_cast<_node*>(this->user_data_ptr());
+    }
+    void set_first_child(_node* new_child)
+    {
+        this->user_data_ptr() = new_child;
+    }
+    using _node::user_data_ptr;
 
-    friend node<node_kind_type>;
+    friend _node;
 };
 } // namespace dryad
 
