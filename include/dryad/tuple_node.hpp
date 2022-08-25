@@ -11,10 +11,9 @@
 
 namespace dryad
 {
-/// Base class for nodes that contain a single child.
-template <typename AbstractBase, auto NodeKind,
-          typename ChildT = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
-class single_node : public basic_container_node<AbstractBase, NodeKind>
+/// Abstract base class for nodes that contain a single child.
+template <typename AbstractBase, typename ChildT = node<typename AbstractBase::node_kind_type>>
+class single_node : public container_node<AbstractBase>
 {
 public:
     //=== access ===//
@@ -39,8 +38,8 @@ public:
 protected:
     using node_base = single_node;
 
-    explicit single_node(node_ctor ctor, ChildT* child)
-    : basic_container_node<AbstractBase, NodeKind>(ctor)
+    explicit single_node(node_ctor ctor, typename AbstractBase::node_kind_type kind, ChildT* child)
+    : container_node<AbstractBase>(ctor, kind)
     {
         this->insert_first_child(child);
     }
@@ -51,10 +50,10 @@ protected:
 
 namespace dryad
 {
-/// Base class for nodes that contain N nodes of the specified type.
-template <typename AbstractBase, auto NodeKind, std::size_t N,
-          typename ChildT = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
-class array_node : public basic_container_node<AbstractBase, NodeKind>
+/// Abstract base class for nodes that contain N nodes of the specified type.
+template <typename AbstractBase, std::size_t N,
+          typename ChildT = node<typename AbstractBase::node_kind_type>>
+class array_node : public container_node<AbstractBase>
 {
     static_assert(N >= 1);
 
@@ -127,8 +126,9 @@ public:
 protected:
     using node_base = array_node;
 
-    explicit array_node(node_ctor ctor, std::initializer_list<ChildT*> children)
-    : basic_container_node<AbstractBase, NodeKind>(ctor)
+    explicit array_node(node_ctor ctor, typename AbstractBase::node_kind_type kind,
+                        std::initializer_list<ChildT*> children)
+    : container_node<AbstractBase>(ctor, kind)
     {
         auto idx = 0;
         for (auto child : children)
@@ -152,9 +152,9 @@ private:
 
 namespace dryad
 {
-/// Base class for nodes that contain the specified child types.
-template <typename AbstractBase, auto NodeKind, typename HeadChildT, typename... TailChildTs>
-class tuple_node : public basic_container_node<AbstractBase, NodeKind>
+/// Abstract base class for nodes that contain the specified child types.
+template <typename AbstractBase, typename HeadChildT, typename... TailChildTs>
+class tuple_node : public container_node<AbstractBase>
 {
 public:
     //=== access ===//
@@ -201,8 +201,9 @@ protected:
     using node_base = tuple_node;
 
     template <typename H, typename... T>
-    explicit tuple_node(node_ctor ctor, H* head, T*... tail)
-    : basic_container_node<AbstractBase, NodeKind>(ctor), _children(tail...)
+    explicit tuple_node(node_ctor ctor, typename AbstractBase::node_kind_type kind, H* head,
+                        T*... tail)
+    : container_node<AbstractBase>(ctor, kind), _children(tail...)
     {
         DRYAD_PRECONDITION(((head != nullptr) && ... && (tail != nullptr)));
         this->insert_first_child(head);
@@ -217,8 +218,8 @@ private:
     _detail::tuple<TailChildTs*...> _children;
 };
 
-template <typename AbstractBase, auto NodeKind, typename LeftChild, typename RightChild = LeftChild>
-class binary_node : public tuple_node<AbstractBase, NodeKind, LeftChild, RightChild>
+template <typename AbstractBase, typename LeftChild, typename RightChild = LeftChild>
+class binary_node : public tuple_node<AbstractBase, LeftChild, RightChild>
 {
 public:
     //=== access ===//
@@ -253,8 +254,9 @@ public:
 protected:
     using node_base = binary_node;
 
-    explicit binary_node(node_ctor ctor, LeftChild* first, RightChild* second)
-    : tuple_node<AbstractBase, NodeKind, LeftChild, RightChild>(ctor, first, second)
+    explicit binary_node(node_ctor ctor, typename AbstractBase::node_kind_type kind,
+                         LeftChild* first, RightChild* second)
+    : tuple_node<AbstractBase, LeftChild, RightChild>(ctor, kind, first, second)
     {}
 
     ~binary_node() = default;

@@ -16,12 +16,12 @@ enum class node_kind
 
 using node = dryad::node<node_kind>;
 
-struct leaf_node : dryad::basic_node<node, node_kind::leaf>
+struct leaf_node : dryad::basic_node<node_kind::leaf>
 {
     DRYAD_NODE_CTOR(leaf_node);
 };
 
-struct container_node : dryad::list_node<node, node_kind::container>
+struct container_node : dryad::basic_node<node_kind::container, dryad::list_node<node>>
 {
     DRYAD_NODE_CTOR(container_node);
 };

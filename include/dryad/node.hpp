@@ -7,6 +7,7 @@
 #include <dryad/_detail/assert.hpp>
 #include <dryad/_detail/config.hpp>
 #include <dryad/_detail/iterator.hpp>
+#include <initializer_list>
 
 namespace dryad
 {
@@ -304,8 +305,8 @@ private:
     std::uint32_t  _user_data32;
     void*          _user_data_ptr; // If it's a container, pointer to first child.
 
-    template <typename, typename>
-    friend class _container_node;
+    template <typename>
+    friend class container_node;
     template <typename, typename>
     friend class tree;
 };
@@ -314,7 +315,7 @@ private:
 namespace dryad
 {
 /// A node without any special members.
-template <typename AbstractBase, auto NodeKind>
+template <auto NodeKind, typename AbstractBase = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
 class basic_node : public AbstractBase
 {
     static_assert(is_abstract_node<AbstractBase, DRYAD_DECAY_DECLTYPE(NodeKind)>);
@@ -337,7 +338,16 @@ public:
 
 protected:
     using node_base = basic_node;
-    explicit basic_node(node_ctor ctor) : AbstractBase(ctor, kind()) {}
+
+    template <typename... Args>
+    explicit basic_node(node_ctor ctor, Args&&... args)
+    : AbstractBase(ctor, kind(), DRYAD_FWD(args)...)
+    {}
+    template <typename T>
+    explicit basic_node(node_ctor ctor, std::initializer_list<T> list)
+    : AbstractBase(ctor, kind(), list)
+    {}
+
     ~basic_node() = default;
 };
 
@@ -383,26 +393,31 @@ protected:
 
 namespace dryad
 {
-// We use a helper class that is partially type-erased to remove template bloat.
-template <typename AbstractBase, typename NodeKind>
-class _container_node : public AbstractBase
+/// Base class for all nodes that own child nodes, which should be traversed.
+/// This is just an implementation detail that is not relevant unless you implement your own
+/// containers.
+template <typename AbstractBase>
+class container_node : public AbstractBase
 {
+public:
+    using node_kind_type = typename AbstractBase::node_kind_type;
+
 protected:
-    void insert_first_child(node<NodeKind>* child)
+    void insert_first_child(node<node_kind_type>* child)
     {
         DRYAD_PRECONDITION(!child->is_linked_in_tree());
         DRYAD_PRECONDITION(this->first_child() == nullptr);
         child->set_next_parent(this);
         this->user_data_ptr() = child;
     }
-    void insert_child_front(node<NodeKind>* child)
+    void insert_child_front(node<node_kind_type>* child)
     {
         DRYAD_PRECONDITION(!child->is_linked_in_tree());
         DRYAD_PRECONDITION(this->first_child() != nullptr);
         child->set_next_sibling(this->first_child());
         this->user_data_ptr() = child;
     }
-    void insert_child_after(node<NodeKind>* pos, node<NodeKind>* child)
+    void insert_child_after(node<node_kind_type>* pos, node<node_kind_type>* child)
     {
         DRYAD_PRECONDITION(!child->is_linked_in_tree());
         DRYAD_PRECONDITION(this->first_child() != nullptr);
@@ -410,7 +425,7 @@ protected:
         pos->set_next_sibling(child);
     }
 
-    node<NodeKind>* erase_child_after(node<NodeKind>* pos)
+    node<node_kind_type>* erase_child_after(node<node_kind_type>* pos)
     {
         if (pos == nullptr)
         {
@@ -434,51 +449,18 @@ protected:
         }
     }
 
-private:
-    explicit _container_node(node_ctor ctor, NodeKind kind) : AbstractBase(ctor, kind)
+protected:
+    explicit container_node(node_ctor ctor, node_kind_type kind) : AbstractBase(ctor, kind)
     {
         this->_is_container = true;
     }
 
-    ~_container_node() = default;
+    ~container_node() = default;
 
-    using node<NodeKind>::user_data_ptr;
+private:
+    using node<node_kind_type>::user_data_ptr;
 
-    friend node<NodeKind>;
-    template <typename, auto>
-    friend class basic_container_node;
-};
-
-/// Base class for all nodes that own child nodes, which should be traversed.
-/// This is just an implementation detail that is not relevant unless you implement your own
-/// containers.
-template <typename AbstractBase, auto NodeKind>
-class basic_container_node : public _container_node<AbstractBase, DRYAD_DECAY_DECLTYPE(NodeKind)>
-{
-    static_assert(is_abstract_node<AbstractBase, DRYAD_DECAY_DECLTYPE(NodeKind)>);
-    static_assert(AbstractBase::type_matches_kind(NodeKind));
-
-public:
-    static constexpr bool type_is_abstract()
-    {
-        return false;
-    }
-    static constexpr bool type_matches_kind(DRYAD_DECAY_DECLTYPE(NodeKind) kind)
-    {
-        return kind == NodeKind;
-    }
-
-    static constexpr auto kind()
-    {
-        return NodeKind;
-    }
-
-protected:
-    using node_base = basic_container_node;
-    explicit basic_container_node(node_ctor ctor)
-    : _container_node<AbstractBase, DRYAD_DECAY_DECLTYPE(NodeKind)>(ctor, kind())
-    {}
-    ~basic_container_node() = default;
+    friend node<node_kind_type>;
 };
 } // namespace dryad
 

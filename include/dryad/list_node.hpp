@@ -69,13 +69,12 @@ struct _list_node_children_range
     std::size_t                             _size;
 };
 
-/// Base class for nodes that contain a linked-list of child nodes.
-template <typename AbstractBase, auto NodeKind,
-          typename ChildT = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
-class list_node : public basic_container_node<AbstractBase, NodeKind>
+/// Abstract base class for nodes that contain a linked-list of child nodes.
+template <typename AbstractBase, typename ChildT = node<typename AbstractBase::node_kind_type>>
+class list_node : public container_node<AbstractBase>
 {
 public:
-    using node_kind_type = DRYAD_DECAY_DECLTYPE(NodeKind);
+    using node_kind_type = typename AbstractBase::node_kind_type;
 
     //=== access ===//
     _list_node_children_range<ChildT> children()
@@ -126,7 +125,8 @@ public:
 
 protected:
     using node_base = list_node;
-    explicit list_node(node_ctor ctor) : basic_container_node<AbstractBase, NodeKind>(ctor)
+    explicit list_node(node_ctor ctor, node_kind_type kind)
+    : container_node<AbstractBase>(ctor, kind)
     {
         static_assert(dryad::is_node<ChildT, node_kind_type>);
     }
@@ -134,7 +134,7 @@ protected:
 
 private:
     // We use user_data32 to store the number of children.
-    using basic_container_node<AbstractBase, NodeKind>::user_data32;
+    using AbstractBase::user_data32;
 
     template <typename T>
     friend struct _list_node_children_range;

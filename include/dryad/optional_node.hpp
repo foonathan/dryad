@@ -9,10 +9,9 @@
 
 namespace dryad
 {
-/// Base class for nodes that contain no child or a a single child.
-template <typename AbstractBase, auto NodeKind,
-          typename ChildT = node<DRYAD_DECAY_DECLTYPE(NodeKind)>>
-class optional_node : public basic_container_node<AbstractBase, NodeKind>
+/// Abstract base class for nodes that contain no child or a a single child.
+template <typename AbstractBase, typename ChildT = node<typename AbstractBase::node_kind_type>>
+class optional_node : public container_node<AbstractBase>
 {
 public:
     //=== access ===//
@@ -61,7 +60,9 @@ public:
 protected:
     using node_base = optional_node;
 
-    explicit optional_node(node_ctor ctor) : basic_container_node<AbstractBase, NodeKind>(ctor) {}
+    explicit optional_node(node_ctor ctor, typename AbstractBase::node_kind_type kind)
+    : container_node<AbstractBase>(ctor, kind)
+    {}
 
     ~optional_node() = default;
 };

@@ -23,11 +23,11 @@ struct base_node : dryad::abstract_node<node, node_kind::leaf1>
     DRYAD_ABSTRACT_NODE_CTOR(base_node);
 };
 
-struct leaf_node1 : dryad::basic_node<base_node, node_kind::leaf1>
+struct leaf_node1 : dryad::basic_node<node_kind::leaf1, base_node>
 {
     DRYAD_NODE_CTOR(leaf_node1);
 };
-struct leaf_node2 : dryad::basic_node<node, node_kind::leaf2>
+struct leaf_node2 : dryad::basic_node<node_kind::leaf2>
 {
     DRYAD_NODE_CTOR(leaf_node2);
 };
@@ -64,11 +64,11 @@ struct base_node : dryad::abstract_node_range<node, node_kind::leaf1, node_kind:
     DRYAD_ABSTRACT_NODE_CTOR(base_node);
 };
 
-struct leaf_node1 : dryad::basic_node<base_node, node_kind::leaf1>
+struct leaf_node1 : dryad::basic_node<node_kind::leaf1, base_node>
 {
     DRYAD_NODE_CTOR(leaf_node1);
 };
-struct leaf_node2 : dryad::basic_node<node, node_kind::leaf2>
+struct leaf_node2 : dryad::basic_node<node_kind::leaf2>
 {
     DRYAD_NODE_CTOR(leaf_node2);
 };
@@ -103,11 +103,11 @@ struct node : dryad::abstract_node_all<node_kind>
     DRYAD_ABSTRACT_NODE_CTOR(node);
 };
 
-struct leaf_node1 : dryad::basic_node<node, node_kind::leaf1>
+struct leaf_node1 : dryad::basic_node<node_kind::leaf1, node>
 {
     DRYAD_NODE_CTOR(leaf_node1);
 };
-struct leaf_node2 : dryad::basic_node<node, node_kind::leaf2>
+struct leaf_node2 : dryad::basic_node<node_kind::leaf2, node>
 {
     DRYAD_NODE_CTOR(leaf_node2);
 };

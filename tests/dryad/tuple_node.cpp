@@ -16,12 +16,12 @@ enum class node_kind
 
 using node = dryad::node<node_kind>;
 
-struct leaf_node : dryad::basic_node<node, node_kind::leaf>
+struct leaf_node : dryad::basic_node<node_kind::leaf>
 {
     DRYAD_NODE_CTOR(leaf_node);
 };
 
-struct single_node : dryad::single_node<node, node_kind::container, leaf_node>
+struct single_node : dryad::basic_node<node_kind::container, dryad::single_node<node, leaf_node>>
 {
     explicit single_node(dryad::node_ctor ctor, leaf_node* node) : node_base(ctor, node) {}
 };
@@ -42,7 +42,7 @@ TEST_CASE("single_node")
 
 namespace
 {
-struct array_node : dryad::array_node<node, node_kind::container, 2, leaf_node>
+struct array_node : dryad::basic_node<node_kind::container, dryad::array_node<node, 2, leaf_node>>
 {
     explicit array_node(dryad::node_ctor ctor, leaf_node* a, leaf_node* b) : node_base(ctor, {a, b})
     {}
@@ -71,7 +71,7 @@ TEST_CASE("array_node")
 
 namespace
 {
-struct binary_node : dryad::binary_node<node, node_kind::container, leaf_node>
+struct binary_node : dryad::basic_node<node_kind::container, dryad::binary_node<node, leaf_node>>
 {
     explicit binary_node(dryad::node_ctor ctor, leaf_node* a, leaf_node* b) : node_base(ctor, a, b)
     {}
