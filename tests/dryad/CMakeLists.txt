@@ -2,17 +2,12 @@
 # SPDX-License-Identifier: BSL-1.0
 
 set(tests
-        detail/integer_sequence.cpp
         detail/std.cpp
-        detail/tuple.cpp
     
         abstract_node.cpp
         arena.cpp
-        list_node.cpp
         node.cpp
-        optional_node.cpp
         tree.cpp
-        tuple_node.cpp
         symbol.cpp)
 
 add_executable(dryad_test ${tests})

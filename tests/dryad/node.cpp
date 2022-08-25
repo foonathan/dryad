@@ -4,7 +4,6 @@
 #include <dryad/node.hpp>
 
 #include <doctest/doctest.h>
-#include <dryad/list_node.hpp>
 #include <dryad/tree.hpp>
 #include <iterator>
 
@@ -23,9 +22,14 @@ struct leaf_node : dryad::basic_node<node_kind::leaf>
     DRYAD_NODE_CTOR(leaf_node);
 };
 
-struct container_node : dryad::basic_node<node_kind::container, dryad::list_node<node>>
+struct container_node : dryad::basic_node<node_kind::container, dryad::container_node<node>>
 {
     DRYAD_NODE_CTOR(container_node);
+
+    void insert_front(node* n)
+    {
+        this->insert_child_after(nullptr, n);
+    }
 };
 } // namespace
 

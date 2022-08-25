@@ -252,7 +252,7 @@ public:
         {
             if (!empty())
                 // The last child has a pointer back to self.
-                return {{}, _self};
+                return {{}, const_cast<T*>(_self)};
             else
                 // begin() == nullptr, so return that as well.
                 return {{}, nullptr};
