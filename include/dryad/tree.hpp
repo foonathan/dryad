@@ -192,7 +192,7 @@ private:
     template <typename NodeKind>
     friend _traverse_range<node<NodeKind>> traverse(node<NodeKind>* n);
     template <typename NodeKind>
-    friend _traverse_range<node<NodeKind>> traverse(const node<NodeKind>* n);
+    friend _traverse_range<const node<NodeKind>> traverse(const node<NodeKind>* n);
 };
 
 template <typename NodeKind>
@@ -201,9 +201,9 @@ _traverse_range<node<NodeKind>> traverse(node<NodeKind>* n)
     return _traverse_range<node<NodeKind>>(n);
 }
 template <typename NodeKind>
-_traverse_range<node<NodeKind>> traverse(const node<NodeKind>* n)
+_traverse_range<const node<NodeKind>> traverse(const node<NodeKind>* n)
 {
-    return _traverse_range<node<NodeKind>>(n);
+    return _traverse_range<const node<NodeKind>>(n);
 }
 
 template <typename NodeKind, typename MemoryResource>
@@ -238,25 +238,25 @@ template <typename Lambda, typename T, void (Lambda::*Ptr)(T*), auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
-    using type = typename tail::template insert<std::decay_t<T>>;
+    using type = typename tail::template insert<T>;
 };
 template <typename Lambda, typename T, void (Lambda::*Ptr)(T*) const, auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
-    using type = typename tail::template insert<std::decay_t<T>>;
+    using type = typename tail::template insert<T>;
 };
 template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*), auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
-    using type = typename tail::template insert<std::decay_t<T>>;
+    using type = typename tail::template insert<T>;
 };
 template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*) const, auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
-    using type = typename tail::template insert<std::decay_t<T>>;
+    using type = typename tail::template insert<T>;
 };
 
 template <typename... Lambdas>
