@@ -625,11 +625,15 @@ struct node_range
 
     node_range(NodeIterator begin, NodeIterator end) : _begin(begin), _end(end) {}
 
-    struct iterator : _detail::forward_iterator_base<iterator, NodeType*, NodeType*, void>
+    using _value_type = std::conditional_t<
+        std::is_const_v<std::remove_pointer_t<typename NodeIterator::value_type>>, const NodeType*,
+        NodeType*>;
+
+    struct iterator : _detail::forward_iterator_base<iterator, _value_type, _value_type, void>
     {
         NodeIterator _cur;
 
-        NodeType* deref() const
+        _value_type deref() const
         {
             return node_cast<NodeType>(*_cur);
         }

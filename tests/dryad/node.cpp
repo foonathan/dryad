@@ -32,7 +32,7 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
         this->insert_children_after(nullptr, ns...);
     }
 
-    auto children()
+    auto children() const
     {
         auto node_children = node_base::children();
         return dryad::make_node_range<leaf_node>(node_children.begin(), node_children.end());
@@ -74,7 +74,7 @@ TEST_CASE("node")
 
         CHECK(child->children().empty());
     }
-    for (leaf_node* child : dryad::node_cast<container_node>(node)->children())
+    for (const leaf_node* child : dryad::node_cast<container_node>(node)->children())
     {
         CHECK(child->parent() == node);
 
