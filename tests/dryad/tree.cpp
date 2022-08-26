@@ -107,6 +107,28 @@ TEST_CASE("visit_tree")
         CHECK(leaf_count == 3);
         CHECK(container_count == 2);
     }
+    SUBCASE("with traverse_event_enter")
+    {
+        auto leaf_count      = 0;
+        auto container_count = 0;
+        dryad::visit_tree_all(
+            tree, [&](dryad::traverse_event_enter, leaf_node*) { ++leaf_count; },
+            [&](dryad::traverse_event_enter, container_node*) { ++container_count; });
+
+        CHECK(leaf_count == 0);
+        CHECK(container_count == 1);
+    }
+    SUBCASE("with traverse_event_exit")
+    {
+        auto leaf_count      = 0;
+        auto container_count = 0;
+        dryad::visit_tree_all(
+            tree, [&](dryad::traverse_event_exit, leaf_node*) { ++leaf_count; },
+            [&](dryad::traverse_event_exit, container_node*) { ++container_count; });
+
+        CHECK(leaf_count == 0);
+        CHECK(container_count == 1);
+    }
     SUBCASE("without traverse_event")
     {
         auto leaf_count      = 0;

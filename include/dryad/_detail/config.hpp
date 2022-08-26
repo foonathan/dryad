@@ -40,6 +40,15 @@ constexpr bool is_decayed_same = std::is_same_v<std::decay_t<T>, std::decay_t<U>
 
 template <typename T, typename Fallback>
 using type_or = std::conditional_t<std::is_void_v<T>, Fallback, T>;
+
+template <int Priority>
+struct priority_tag;
+template <>
+struct priority_tag<0>
+{};
+template <int Priority>
+struct priority_tag : priority_tag<Priority - 1>
+{};
 } // namespace dryad::_detail
 
 //=== force inline ===//

@@ -70,6 +70,9 @@ enum class traverse_event
     leaf,
 };
 
+using traverse_event_enter = std::integral_constant<traverse_event, traverse_event::enter>;
+using traverse_event_exit  = std::integral_constant<traverse_event, traverse_event::exit>;
+
 template <typename T>
 class _traverse_range
 {
@@ -226,14 +229,34 @@ template <typename... NodeTypes, typename... Lambdas>
 struct _visit_tree<_detail::node_type_list<NodeTypes...>, Lambdas...>
 {
     template <typename T, typename Node, typename Lambda>
-    DRYAD_FORCE_INLINE static auto call(traverse_event ev, Node* node, Lambda&& lambda)
+    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<3>, traverse_event ev, Node* node,
+                                        Lambda&& lambda)
         -> decltype(lambda(ev, DRYAD_DECLVAL(T*)), true)
     {
         lambda(ev, static_cast<T*>(node));
         return true;
     }
     template <typename T, typename Node, typename Lambda>
-    DRYAD_FORCE_INLINE static auto call(traverse_event ev, Node* node, Lambda& lambda)
+    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, traverse_event ev, Node* node,
+                                        Lambda&& lambda)
+        -> decltype(lambda(traverse_event_enter{}, DRYAD_DECLVAL(T*)), true)
+    {
+        if (ev == traverse_event::enter)
+            lambda(traverse_event_enter{}, static_cast<T*>(node));
+        return true;
+    }
+    template <typename T, typename Node, typename Lambda>
+    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<1>, traverse_event ev, Node* node,
+                                        Lambda&& lambda)
+        -> decltype(lambda(traverse_event_exit{}, DRYAD_DECLVAL(T*)), true)
+    {
+        if (ev == traverse_event::exit)
+            lambda(traverse_event_exit{}, static_cast<T*>(node));
+        return true;
+    }
+    template <typename T, typename Node, typename Lambda>
+    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<0>, traverse_event ev, Node* node,
+                                        Lambda&& lambda)
         -> decltype(lambda(DRYAD_DECLVAL(T*)), true)
     {
         if (ev != traverse_event::exit)
@@ -249,7 +272,8 @@ struct _visit_tree<_detail::node_type_list<NodeTypes...>, Lambdas...>
             auto                  kind = node->kind();
             [[maybe_unused]] auto found_callback
                 = ((NodeTypes::type_matches_kind(kind)
-                        ? call<NodeTypes>(ev, node_cast<NodeTypes>(node), lambdas)
+                        ? call<NodeTypes>(_detail::priority_tag<3>{}, ev,
+                                          node_cast<NodeTypes>(node), lambdas)
                         : false)
                    || ...);
 
@@ -261,8 +285,12 @@ struct _visit_tree<_detail::node_type_list<NodeTypes...>, Lambdas...>
 
 /// Traverses the (sub)tree invoking the appropriate lambda for each node type.
 ///
-/// * If a lambda has signature (traverse_event, NodeType), will invoke it for every NodeType.
-/// * If a lambda has signature (NodeType), will invoke it on enter/leaf events only.
+/// * If a lambda has signature (traverse_event, NodeType), will invoke it every time NodeType is
+/// visited.
+/// * If a lambda has signature (traverse_event_enter, NodeType), will invoke it on enter events
+/// only.
+/// * If a lambda has signature (traverse_event_exit, NodeType), will invoke it on exit events only.
+/// * If a lambda has signature (NodeType), will invoke it on enter or leaf events only.
 ///
 /// It will try each lambda in the order specified, NodeType can be abstract in which case it
 /// swallows all. Only one lambda will be invoked. If the type of a node does not match any lambda,

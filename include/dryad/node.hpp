@@ -12,8 +12,6 @@ namespace dryad
 {
 template <typename NodeKind>
 class node;
-
-enum class traverse_event;
 } // namespace dryad
 
 namespace dryad
@@ -707,13 +705,13 @@ struct _node_types_for_lambdas<Ptr, Tail...>
     using tail = typename _node_types_for_lambdas<Tail...>::type;
     using type = typename tail::template insert<T>;
 };
-template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*), auto... Tail>
+template <typename Lambda, typename Ev, typename T, void (Lambda::*Ptr)(Ev, T*), auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
     using type = typename tail::template insert<T>;
 };
-template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*) const, auto... Tail>
+template <typename Lambda, typename Ev, typename T, void (Lambda::*Ptr)(Ev, T*) const, auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
