@@ -80,7 +80,7 @@ TEST_CASE("tree")
     }
 }
 
-TEST_CASE("visit")
+TEST_CASE("visit_tree")
 {
     dryad::tree<node_kind> tree;
     CHECK(tree.root() == nullptr);
@@ -100,7 +100,7 @@ TEST_CASE("visit")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
-        dryad::visit_all(
+        dryad::visit_tree_all(
             tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; },
             [&](dryad::traverse_event, container_node*) { ++container_count; });
 
@@ -111,7 +111,7 @@ TEST_CASE("visit")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
-        dryad::visit_all(
+        dryad::visit_tree_all(
             tree, [&](leaf_node*) { ++leaf_count; }, [&](container_node*) { ++container_count; });
 
         CHECK(leaf_count == 3);
@@ -121,7 +121,7 @@ TEST_CASE("visit")
     {
         auto leaf_count = 0;
         auto node_count = 0;
-        dryad::visit_all(
+        dryad::visit_tree_all(
             tree, [&](dryad::traverse_event, node*) { ++node_count; },
             [&](dryad::traverse_event, leaf_node*) { ++leaf_count; });
 
@@ -131,7 +131,7 @@ TEST_CASE("visit")
     SUBCASE("leaf only")
     {
         auto leaf_count = 0;
-        dryad::visit(tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; });
+        dryad::visit_tree(tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; });
 
         CHECK(leaf_count == 3);
     }

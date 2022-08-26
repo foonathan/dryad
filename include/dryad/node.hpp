@@ -12,6 +12,8 @@ namespace dryad
 {
 template <typename NodeKind>
 class node;
+
+enum class traverse_event;
 } // namespace dryad
 
 namespace dryad
@@ -670,6 +672,105 @@ template <typename NodeType, typename NodeIterator>
 auto make_node_range(NodeIterator begin, NodeIterator end)
 {
     return node_range<NodeIterator, NodeType>(begin, end);
+}
+} // namespace dryad
+
+namespace dryad::_detail
+{
+template <typename... T>
+struct node_type_list
+{
+    template <typename U>
+    using insert = node_type_list<U, T...>;
+};
+
+template <auto... LambdaCallOps>
+struct _node_types_for_lambdas;
+template <>
+struct _node_types_for_lambdas<>
+{
+    using type = node_type_list<>;
+};
+template <typename Lambda, typename T, void (Lambda::*Ptr)(T*), auto... Tail>
+struct _node_types_for_lambdas<Ptr, Tail...>
+{
+    using tail = typename _node_types_for_lambdas<Tail...>::type;
+    using type = typename tail::template insert<T>;
+};
+template <typename Lambda, typename T, void (Lambda::*Ptr)(T*) const, auto... Tail>
+struct _node_types_for_lambdas<Ptr, Tail...>
+{
+    using tail = typename _node_types_for_lambdas<Tail...>::type;
+    using type = typename tail::template insert<T>;
+};
+template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*), auto... Tail>
+struct _node_types_for_lambdas<Ptr, Tail...>
+{
+    using tail = typename _node_types_for_lambdas<Tail...>::type;
+    using type = typename tail::template insert<T>;
+};
+template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*) const, auto... Tail>
+struct _node_types_for_lambdas<Ptr, Tail...>
+{
+    using tail = typename _node_types_for_lambdas<Tail...>::type;
+    using type = typename tail::template insert<T>;
+};
+
+template <typename... Lambdas>
+using node_types_for_lambdas = typename _node_types_for_lambdas<&Lambdas::operator()...>::type;
+} // namespace dryad::_detail
+
+namespace dryad
+{
+template <typename NodeTypeList, typename... Lambdas>
+struct _visit_node;
+template <typename... NodeTypes, typename... Lambdas>
+struct _visit_node<_detail::node_type_list<NodeTypes...>, Lambdas...>
+{
+    template <bool All = false, typename Node>
+    DRYAD_FORCE_INLINE static void visit(Node* node, Lambdas&&... lambdas)
+    {
+        auto                  kind = node->kind();
+        [[maybe_unused]] auto found_callback
+            = ((NodeTypes::type_matches_kind(kind) ? (lambdas(static_cast<NodeTypes*>(node)), true)
+                                                   : false)
+               || ...);
+
+        if constexpr (All)
+            DRYAD_ASSERT(found_callback, "missing type for callback");
+    }
+};
+
+/// Visits the node invoking the appropriate lambda for each node type.
+///
+/// It will try each lambda in the order specified, NodeType can be abstract in which case it
+/// swallows all. Only one lambda will be invoked. If the type of a node does not match any lambda,
+/// it will not be invoked.
+template <typename NodeKind, typename... Lambdas>
+void visit_node(node<NodeKind>* node, Lambdas&&... lambdas)
+{
+    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
+    _visit_node<node_types, Lambdas...>::visit(node, DRYAD_FWD(lambdas)...);
+}
+template <typename NodeKind, typename... Lambdas>
+void visit_node(const node<NodeKind>* node, Lambdas&&... lambdas)
+{
+    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
+    _visit_node<node_types, Lambdas...>::visit(node, DRYAD_FWD(lambdas)...);
+}
+
+/// Same as above, but it is an error if a node cannot be visited.
+template <typename NodeKind, typename... Lambdas>
+void visit_node_all(node<NodeKind>* node, Lambdas&&... lambdas)
+{
+    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
+    _visit_node<node_types, Lambdas...>::template visit<true>(node, DRYAD_FWD(lambdas)...);
+}
+template <typename NodeKind, typename... Lambdas>
+void visit_node_all(const node<NodeKind>* node, Lambdas&&... lambdas)
+{
+    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
+    _visit_node<node_types, Lambdas...>::template visit<true>(node, DRYAD_FWD(lambdas)...);
 }
 } // namespace dryad
 

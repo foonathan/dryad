@@ -218,51 +218,6 @@ auto traverse(const tree<NodeKind, MemoryResource>& t)
 }
 } // namespace dryad
 
-namespace dryad::_detail
-{
-template <typename... T>
-struct node_type_list
-{
-    template <typename U>
-    using insert = node_type_list<U, T...>;
-};
-
-template <auto... LambdaCallOps>
-struct _node_types_for_lambdas;
-template <>
-struct _node_types_for_lambdas<>
-{
-    using type = node_type_list<>;
-};
-template <typename Lambda, typename T, void (Lambda::*Ptr)(T*), auto... Tail>
-struct _node_types_for_lambdas<Ptr, Tail...>
-{
-    using tail = typename _node_types_for_lambdas<Tail...>::type;
-    using type = typename tail::template insert<T>;
-};
-template <typename Lambda, typename T, void (Lambda::*Ptr)(T*) const, auto... Tail>
-struct _node_types_for_lambdas<Ptr, Tail...>
-{
-    using tail = typename _node_types_for_lambdas<Tail...>::type;
-    using type = typename tail::template insert<T>;
-};
-template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*), auto... Tail>
-struct _node_types_for_lambdas<Ptr, Tail...>
-{
-    using tail = typename _node_types_for_lambdas<Tail...>::type;
-    using type = typename tail::template insert<T>;
-};
-template <typename Lambda, typename T, void (Lambda::*Ptr)(traverse_event, T*) const, auto... Tail>
-struct _node_types_for_lambdas<Ptr, Tail...>
-{
-    using tail = typename _node_types_for_lambdas<Tail...>::type;
-    using type = typename tail::template insert<T>;
-};
-
-template <typename... Lambdas>
-using node_types_for_lambdas = typename _node_types_for_lambdas<&Lambdas::operator()...>::type;
-} // namespace dryad::_detail
-
 namespace dryad
 {
 template <typename NodeTypeList, typename... Lambdas>
@@ -304,7 +259,7 @@ struct _visit_tree<_detail::node_type_list<NodeTypes...>, Lambdas...>
     }
 };
 
-/// Traverses the tree invoking the appropriate lambda for each node type.
+/// Traverses the (sub)tree invoking the appropriate lambda for each node type.
 ///
 /// * If a lambda has signature (traverse_event, NodeType), will invoke it for every NodeType.
 /// * If a lambda has signature (NodeType), will invoke it on enter/leaf events only.
@@ -313,50 +268,50 @@ struct _visit_tree<_detail::node_type_list<NodeTypes...>, Lambdas...>
 /// swallows all. Only one lambda will be invoked. If the type of a node does not match any lambda,
 /// it will not be invoked.
 template <typename NodeKind, typename... Lambdas>
-void visit(node<NodeKind>* node, Lambdas&&... lambdas)
+void visit_tree(node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
     _visit_tree<node_types, Lambdas...>::visit(node, DRYAD_FWD(lambdas)...);
 }
 template <typename NodeKind, typename... Lambdas>
-void visit(const node<NodeKind>* node, Lambdas&&... lambdas)
+void visit_tree(const node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
     _visit_tree<node_types, Lambdas...>::visit(node, DRYAD_FWD(lambdas)...);
 }
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
-void visit(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
+void visit_tree(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
 {
-    visit(tree.root(), DRYAD_FWD(lambdas)...);
+    visit_tree(tree.root(), DRYAD_FWD(lambdas)...);
 }
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
-void visit(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
+void visit_tree(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
 {
-    visit(tree.root(), DRYAD_FWD(lambdas)...);
+    visit_tree(tree.root(), DRYAD_FWD(lambdas)...);
 }
 
 /// Same as above, but it is an error if a node cannot be visited.
 template <typename NodeKind, typename... Lambdas>
-void visit_all(node<NodeKind>* node, Lambdas&&... lambdas)
+void visit_tree_all(node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
     _visit_tree<node_types, Lambdas...>::template visit<true>(node, DRYAD_FWD(lambdas)...);
 }
 template <typename NodeKind, typename... Lambdas>
-void visit_all(const node<NodeKind>* node, Lambdas&&... lambdas)
+void visit_tree_all(const node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
     _visit_tree<node_types, Lambdas...>::template visit<true>(node, DRYAD_FWD(lambdas)...);
 }
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
-void visit_all(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
+void visit_tree_all(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
 {
-    visit_all(tree.root(), DRYAD_FWD(lambdas)...);
+    visit_tree_all(tree.root(), DRYAD_FWD(lambdas)...);
 }
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
-void visit_all(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
+void visit_tree_all(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
 {
-    visit_all(tree.root(), DRYAD_FWD(lambdas)...);
+    visit_tree_all(tree.root(), DRYAD_FWD(lambdas)...);
 }
 } // namespace dryad
 

@@ -86,3 +86,63 @@ TEST_CASE("node")
     }
 }
 
+TEST_CASE("visit_node")
+{
+    dryad::tree<node_kind> tree;
+
+    auto a = tree.create<leaf_node>();
+    auto b = tree.create<leaf_node>();
+    auto c = tree.create<leaf_node>();
+
+    auto container = tree.create<container_node>();
+    container->insert_front(a, b, c);
+
+    SUBCASE("without traverse_event")
+    {
+        auto leaf_count      = 0;
+        auto container_count = 0;
+
+        auto visit = [&](auto node) {
+            dryad::visit_node_all(
+                node, [&](leaf_node*) { ++leaf_count; },
+                [&](container_node*) { ++container_count; });
+        };
+        visit(a);
+        visit(b);
+        visit(c);
+        visit(container);
+
+        CHECK(leaf_count == 3);
+        CHECK(container_count == 1);
+    }
+    SUBCASE("catch all")
+    {
+        auto leaf_count = 0;
+        auto node_count = 0;
+
+        auto visit = [&](auto n) {
+            dryad::visit_node_all(
+                n, [&](node*) { ++node_count; }, [&](leaf_node*) { ++leaf_count; });
+        };
+        visit(a);
+        visit(b);
+        visit(c);
+        visit(container);
+
+        CHECK(leaf_count == 0);
+        CHECK(node_count == 4);
+    }
+    SUBCASE("leaf only")
+    {
+        auto leaf_count = 0;
+
+        auto visit = [&](auto node) { dryad::visit_node(node, [&](leaf_node*) { ++leaf_count; }); };
+        visit(a);
+        visit(b);
+        visit(c);
+        visit(container);
+
+        CHECK(leaf_count == 3);
+    }
+}
+
