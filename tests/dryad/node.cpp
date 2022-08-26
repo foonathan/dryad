@@ -37,6 +37,10 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
         auto node_children = node_base::children();
         return dryad::make_node_range<leaf_node>(node_children.begin(), node_children.end());
     }
+
+    DRYAD_CHILD_NODE_GETTER(leaf_node, first, nullptr)
+    DRYAD_CHILD_NODE_GETTER(leaf_node, second, first())
+    DRYAD_CHILD_NODE_GETTER(leaf_node, third, second())
 };
 } // namespace
 
@@ -52,6 +56,10 @@ TEST_CASE("node")
         auto container = tree.create<container_node>();
         container->insert_front(a, b, c);
         tree.set_root(container);
+
+        CHECK(container->first() == a);
+        CHECK(container->second() == b);
+        CHECK(container->third() == c);
 
         return tree;
     }();

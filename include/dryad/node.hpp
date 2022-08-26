@@ -554,11 +554,26 @@ protected:
         }
     }
 
-private:
-    _node* first_child() const
+    //=== access ===//
+    _node* first_child()
     {
         return static_cast<_node*>(this->user_data_ptr());
     }
+    const _node* first_child() const
+    {
+        return static_cast<const _node*>(this->user_data_ptr());
+    }
+
+    _node* child_after(const _node* prev)
+    {
+        return prev == nullptr ? first_child() : prev->next_node();
+    }
+    const _node* child_after(const _node* prev) const
+    {
+        return prev == nullptr ? first_child() : prev->next_node();
+    }
+
+private:
     void set_first_child(_node* new_child)
     {
         this->user_data_ptr() = new_child;
@@ -567,6 +582,16 @@ private:
 
     friend _node;
 };
+
+#define DRYAD_CHILD_NODE_GETTER(Type, Name, PrevChild)                                             \
+    Type* Name()                                                                                   \
+    {                                                                                              \
+        return ::dryad::node_cast<Type>(this->child_after(PrevChild));                             \
+    }                                                                                              \
+    const Type* Name() const                                                                       \
+    {                                                                                              \
+        return ::dryad::node_cast<Type>(this->child_after(PrevChild));                             \
+    }
 } // namespace dryad
 
 namespace dryad
