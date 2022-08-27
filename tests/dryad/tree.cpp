@@ -129,7 +129,21 @@ TEST_CASE("visit_tree")
         CHECK(leaf_count == 0);
         CHECK(container_count == 1);
     }
-    SUBCASE("without traverse_event")
+    SUBCASE("child visitor")
+    {
+        auto leaf_count      = 0;
+        auto container_count = 0;
+        dryad::visit_tree_all(
+            tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; },
+            [&](dryad::child_visitor<node_kind> visitor, container_node* node) {
+                ++container_count;
+                visitor(node->children().front());
+            });
+
+        CHECK(leaf_count == 1);
+        CHECK(container_count == 1);
+    }
+    SUBCASE("no event argument")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
