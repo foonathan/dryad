@@ -7,6 +7,7 @@ set(tests
         abstract_node.cpp
         arena.cpp
         node.cpp
+        node_map.cpp
         tree.cpp
         symbol.cpp)
 

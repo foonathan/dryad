@@ -184,7 +184,7 @@ public:
     void reserve(std::size_t number_of_symbols, std::size_t average_symbol_length)
     {
         _buffer.reserve(_resource, number_of_symbols * average_symbol_length);
-        _map.rehash(_resource, number_of_symbols, traits{&_buffer});
+        _map.rehash(_resource, _map.to_table_capacity(number_of_symbols), traits{&_buffer});
     }
 
     symbol intern(const CharT* str, std::size_t length)

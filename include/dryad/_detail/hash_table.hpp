@@ -7,6 +7,7 @@
 #include <climits>
 #include <dryad/_detail/assert.hpp>
 #include <dryad/_detail/config.hpp>
+#include <dryad/_detail/iterator.hpp>
 #include <dryad/_detail/memory_resource.hpp>
 
 #if 0
@@ -53,41 +54,6 @@ public:
         _table_capacity = 0;
     }
 
-    template <typename ResourcePtr>
-    void rehash(ResourcePtr resource, std::size_t new_capacity, Traits traits = {})
-    {
-        new_capacity = to_table_capacity(new_capacity);
-        if (new_capacity <= _table_capacity)
-            return;
-
-        auto old_table    = _table;
-        auto old_capacity = _table_capacity;
-
-        // Allocate a bigger, currently empty table.
-        _table = static_cast<value_type*>(
-            resource->allocate(new_capacity * sizeof(value_type), alignof(value_type)));
-        _table_capacity = new_capacity;
-        Traits::fill_unoccupied(_table, _table_capacity);
-
-        // Insert existing values into the new table.
-        if (_table_size > 0)
-        {
-            _table_size = 0;
-
-            for (auto entry = old_table; entry != old_table + old_capacity; ++entry)
-                if (!Traits::is_unoccupied(*entry))
-                {
-                    auto new_entry = lookup_entry(*entry, traits);
-                    new_entry.create(*entry);
-                }
-        }
-    }
-    template <typename ResourcePtr>
-    void rehash(ResourcePtr resource, Traits traits = {})
-    {
-        rehash(resource, 2 * _table_capacity, traits);
-    }
-
     struct entry_handle
     {
         hash_table* _self;
@@ -97,6 +63,11 @@ public:
         explicit operator bool() const
         {
             return _valid;
+        }
+
+        std::size_t index() const
+        {
+            return std::size_t(_entry - _self->_table);
         }
 
         value_type& get() const
@@ -155,6 +126,9 @@ public:
     template <typename Key>
     value_type* lookup(const Key& key, Traits traits = {}) const
     {
+        if (_table_size == 0)
+            return nullptr;
+
         auto entry = const_cast<hash_table*>(this)->lookup_entry(key, traits);
         return entry ? &entry.get() : nullptr;
     }
@@ -164,7 +138,6 @@ public:
         return _table_size >= _table_capacity / 2;
     }
 
-private:
     static constexpr std::size_t to_table_capacity(unsigned long long cap)
     {
         if (cap < MinTableSize)
@@ -174,6 +147,112 @@ private:
         return std::size_t(1) << (int(sizeof(cap) * CHAR_BIT) - __builtin_clzll(cap - 1));
     }
 
+    template <typename ResourcePtr, typename Callback = void (*)(entry_handle, std::size_t)>
+    void rehash(
+        ResourcePtr resource, std::size_t new_capacity, Traits traits = {},
+        Callback entry_cb = +[](entry_handle, std::size_t) {})
+    {
+        DRYAD_PRECONDITION(new_capacity == to_table_capacity(new_capacity));
+        if (new_capacity <= _table_capacity)
+            return;
+
+        auto old_table    = _table;
+        auto old_capacity = _table_capacity;
+
+        // Allocate a bigger, currently empty table.
+        _table = static_cast<value_type*>(
+            resource->allocate(new_capacity * sizeof(value_type), alignof(value_type)));
+        _table_capacity = new_capacity;
+        Traits::fill_unoccupied(_table, _table_capacity);
+
+        // Insert existing values into the new table.
+        if (_table_size > 0)
+        {
+            _table_size = 0;
+
+            for (auto entry = old_table; entry != old_table + old_capacity; ++entry)
+                if (!Traits::is_unoccupied(*entry))
+                {
+                    auto new_entry = lookup_entry(*entry, traits);
+                    new_entry.create(*entry);
+                    entry_cb(new_entry, std::size_t(entry - old_table));
+                }
+        }
+    }
+    template <typename ResourcePtr, typename Callback = void (*)(entry_handle, std::size_t)>
+    void rehash(
+        ResourcePtr resource, Traits traits = {},
+        Callback entry_cb = +[](entry_handle, std::size_t) {})
+    {
+        rehash(resource, to_table_capacity(2 * _table_capacity), traits, entry_cb);
+    }
+
+    //=== access ===//
+    std::size_t size() const
+    {
+        return _table_size;
+    }
+    std::size_t capacity() const
+    {
+        return _table_capacity;
+    }
+
+    struct entry_range
+    {
+        struct iterator : _detail::forward_iterator_base<iterator, entry_handle, entry_handle, void>
+        {
+            hash_table* _self;
+            value_type* _cur;
+
+            iterator() : _self(nullptr), _cur(nullptr) {}
+            explicit iterator(hash_table& self, value_type* cur) : _self(&self), _cur(cur) {}
+
+            entry_handle deref() const
+            {
+                return {_self, _cur, true};
+            }
+            void increment()
+            {
+                auto end = _self->_table + _self->_table_capacity;
+                do
+                {
+                    ++_cur;
+                } while (_cur != end && Traits::is_unoccupied(*_cur));
+            }
+            bool equal(iterator rhs) const
+            {
+                return _cur == rhs._cur;
+            }
+        };
+
+        iterator begin() const
+        {
+            if (_self->size() == 0)
+                return {};
+
+            auto cur = _self->_table;
+            while (Traits::is_unoccupied(*cur))
+                cur++;
+            return iterator(*_self, cur);
+        }
+        iterator end() const
+        {
+            if (_self->size() == 0)
+                return {};
+
+            return iterator(*_self, _self->_table + _self->_table_capacity);
+        }
+
+        hash_table* _self;
+    };
+
+    /// Iterates over all occupied entries.
+    entry_range entries()
+    {
+        return {this};
+    }
+
+private:
     value_type* _table;
     std::size_t _table_capacity; // power of two
     std::size_t _table_size;
