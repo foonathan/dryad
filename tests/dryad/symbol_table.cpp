@@ -16,7 +16,8 @@ void check_iter(const Table& table, T... elements)
         set.insert(sym);
 
     CHECK(set.size() == sizeof...(T));
-    (CHECK(set.count(elements) == 1), ...);
+    auto has_elements = ((set.count(elements) == 1) && ...);
+    CHECK(has_elements);
 }
 } // namespace
 
