@@ -13,7 +13,10 @@ void check_iter(const Table& table, T... elements)
 {
     std::set<typename Table::symbol> set;
     for (auto [sym, decl] : table)
+    {
         set.insert(sym);
+        (void)decl;
+    }
 
     CHECK(set.size() == sizeof...(T));
     auto has_elements = ((set.count(elements) == 1) && ...);
