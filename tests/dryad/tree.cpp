@@ -153,6 +153,17 @@ TEST_CASE("visit_tree")
         CHECK(leaf_count == 3);
         CHECK(container_count == 1);
     }
+    SUBCASE("ignore_node")
+    {
+        auto leaf_count      = 0;
+        auto container_count = 0;
+        dryad::visit_tree_all(
+            tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; },
+            dryad::ignore_node<container_node>);
+
+        CHECK(leaf_count == 0);
+        CHECK(container_count == 0);
+    }
     SUBCASE("catch all")
     {
         auto leaf_count = 0;

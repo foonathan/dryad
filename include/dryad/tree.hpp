@@ -229,6 +229,7 @@ auto traverse(const tree<NodeKind, MemoryResource>& t)
 
 namespace dryad
 {
+/// Visitor that can be used to visit the children of a node manually.
 template <typename NodeKind>
 struct child_visitor
 {
@@ -241,16 +242,27 @@ struct child_visitor
     }
 };
 
+/// Use as lambda to indicate that you don't want to visit a node or its children.
+template <typename NodeType>
+constexpr auto ignore_node
+    = [](child_visitor<typename NodeType::node_kind_type>, const NodeType*) {};
+
 template <bool All, typename NodeKind, typename NodeTypeList, typename... Lambdas>
 struct _visit_tree;
 template <bool All, typename NodeKind, typename... NodeTypes, typename... Lambdas>
-struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas...> : Lambdas...
+struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas...>
+: std::decay_t<Lambdas>...
 {
-    DRYAD_FORCE_INLINE _visit_tree(Lambdas&&... lambdas) : Lambdas(DRYAD_FWD(lambdas))... {}
+    using node_kind                = std::decay_t<NodeKind>;
+    static constexpr auto is_const = std::is_const_v<NodeKind>;
+
+    DRYAD_FORCE_INLINE _visit_tree(Lambdas&&... lambdas)
+    : std::decay_t<Lambdas>(DRYAD_FWD(lambdas))...
+    {}
 
     template <typename T, typename Iter, typename Lambda>
-    DRYAD_FORCE_INLINE auto call(_detail::priority_tag<4>, Iter& iter, Lambda&& lambda)
-        -> decltype(lambda(child_visitor<NodeKind>{}, DRYAD_DECLVAL(T*)), true)
+    DRYAD_FORCE_INLINE auto call(_detail::priority_tag<4>, Iter& iter, Lambda& lambda)
+        -> decltype(lambda(child_visitor<node_kind>{}, DRYAD_DECLVAL(T*)), true)
     {
         auto node = node_try_cast<T>(iter->node);
         if (node == nullptr)
@@ -258,24 +270,23 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
 
         if (iter->event == traverse_event::enter)
         {
-            constexpr auto node_is_const = std::is_const_v<std::remove_pointer_t<decltype(node)>>;
-            auto           child_visit   = [](void* _self, const dryad::node<NodeKind>* child) {
+            auto child_visit = [](void* _self, const dryad::node<node_kind>* child) {
                 auto& self = *static_cast<_visit_tree*>(_self);
 
                 // We might need to cast away the const that was added to maintain the function
                 // pointer type.
-                if constexpr (node_is_const)
+                if constexpr (is_const)
                     self.visit(child);
                 else
-                    self.visit(const_cast<dryad::node<NodeKind>*>(child));
+                    self.visit(const_cast<dryad::node<node_kind>*>(child));
             };
-            lambda(child_visitor<NodeKind>{this, child_visit}, node);
+            lambda(child_visitor<node_kind>{this, child_visit}, node);
             iter.skip_children();
         }
         return true;
     }
     template <typename T, typename Iter, typename Lambda>
-    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<3>, Iter& iter, Lambda&& lambda)
+    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<3>, Iter& iter, Lambda& lambda)
         -> decltype(lambda(traverse_event::enter, DRYAD_DECLVAL(T*)), true)
     {
         auto node = node_try_cast<T>(iter->node);
@@ -286,7 +297,7 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
         return true;
     }
     template <typename T, typename Iter, typename Lambda>
-    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda&& lambda)
+    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda& lambda)
         -> decltype(lambda(traverse_event_enter{}, DRYAD_DECLVAL(T*)), true)
     {
         auto node = node_try_cast<T>(iter->node);
@@ -298,7 +309,7 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
         return true;
     }
     template <typename T, typename Iter, typename Lambda>
-    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda&& lambda)
+    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda& lambda)
         -> decltype(lambda(traverse_event_exit{}, DRYAD_DECLVAL(T*)), true)
     {
         auto node = node_try_cast<T>(iter->node);
@@ -310,7 +321,7 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
         return true;
     }
     template <typename T, typename Iter, typename Lambda>
-    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda&& lambda)
+    DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda& lambda)
         -> decltype(lambda(DRYAD_DECLVAL(T*)), true)
     {
         auto node = node_try_cast<T>(iter->node);
@@ -335,12 +346,6 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
             if constexpr (All)
                 DRYAD_ASSERT(found_callback, "missing type for callback");
         }
-    }
-
-    DRYAD_FORCE_INLINE static void child_visit(void* _self, const node<NodeKind>* node)
-    {
-        auto& self = *static_cast<_visit_tree*>(_self);
-        self.visit(node);
     }
 };
 
@@ -369,7 +374,7 @@ template <typename NodeKind, typename... Lambdas>
 void visit_tree(const node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_tree<false, NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
+    _visit_tree<false, const NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
 }
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
 void visit_tree(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
@@ -393,7 +398,7 @@ template <typename NodeKind, typename... Lambdas>
 void visit_tree_all(const node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_tree<true, NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
+    _visit_tree<true, const NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
 }
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
 void visit_tree_all(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
