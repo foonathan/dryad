@@ -232,7 +232,10 @@ class symbol
     static_assert(std::is_unsigned_v<IndexType>);
 
 public:
+    using index_type = IndexType;
+
     constexpr symbol() : _index(IndexType(-1)) {}
+    constexpr explicit symbol(IndexType idx) : _index(idx) {}
 
     //=== fast access ===//
     constexpr explicit operator bool() const
@@ -281,8 +284,6 @@ public:
     }
 
 private:
-    constexpr explicit symbol(IndexType idx) : _index(idx) {}
-
     IndexType _index;
 
     template <typename, typename, typename, typename>

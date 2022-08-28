@@ -9,7 +9,8 @@ set(tests
         node.cpp
         node_map.cpp
         tree.cpp
-        symbol.cpp)
+        symbol.cpp
+        symbol_table.cpp)
 
 add_executable(dryad_test ${tests})
 target_link_libraries(dryad_test PRIVATE dryad_test_base)
