@@ -6,6 +6,7 @@ set(header_files
         ${include_dir}/_detail/assert.hpp
         ${include_dir}/_detail/config.hpp
         ${include_dir}/_detail/iterator.hpp
+        ${include_dir}/_detail/hash_map.hpp
         ${include_dir}/_detail/memory_resource.hpp
         ${include_dir}/_detail/std.hpp
 

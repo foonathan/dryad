@@ -4,13 +4,9 @@
 #ifndef DRYAD_SYMBOL_HPP_INCLUDED
 #define DRYAD_SYMBOL_HPP_INCLUDED
 
-#include <climits>
 #include <cstring>
-#include <dryad/_detail/assert.hpp>
 #include <dryad/_detail/config.hpp>
-#include <dryad/_detail/memory_resource.hpp>
-
-#include <cstdio>
+#include <dryad/_detail/hash_table.hpp>
 
 namespace dryad::_detail
 {
@@ -92,126 +88,40 @@ private:
     std::size_t _capacity;
 };
 
-// Maps a string to its index.
-// TODO: investigate quadratic probing, different max load factor.
-template <typename CharT, typename IndexType>
-class unique_symbol_map
+template <typename IndexType, typename CharT>
+struct symbol_index_hash_traits
 {
-    static constexpr auto min_table_size = 1024u;
+    const symbol_buffer<CharT>* buffer;
 
-public:
-    static constexpr auto invalid_index = IndexType(-1);
+    using value_type = IndexType;
 
-    constexpr unique_symbol_map() : _table(nullptr), _table_capacity(0), _table_size(0) {}
-
-    template <typename ResourcePtr>
-    void free(ResourcePtr resource)
+    static constexpr bool is_unoccupied(IndexType index)
     {
-        if (_table_capacity == 0)
-            return;
-
-        resource->deallocate(_table, _table_capacity * sizeof(IndexType), alignof(IndexType));
-        _table          = nullptr;
-        _table_size     = 0;
-        _table_capacity = 0;
+        return index == IndexType(-1);
     }
-
-    template <typename ResourcePtr>
-    void rehash(ResourcePtr resource, const symbol_buffer<CharT>& symbols, std::size_t new_capacity)
+    static void fill_unoccupied(IndexType* data, std::size_t size)
     {
-        new_capacity = to_table_capacity(new_capacity);
-        if (new_capacity <= _table_capacity)
-            return;
-
-        auto old_table    = _table;
-        auto old_capacity = _table_capacity;
-
-        _table = static_cast<IndexType*>(
-            resource->allocate(new_capacity * sizeof(IndexType), alignof(IndexType)));
-        _table_capacity = new_capacity;
-
-        // Set the new table to invalid_index.
         // It has all bits set to 1, so we can do it per-byte.
-        std::memset(_table, static_cast<unsigned char>(invalid_index),
-                    _table_capacity * sizeof(IndexType));
-
-        // Insert existing strings into the new table.
-        if (_table_size > 0)
-        {
-            _table_size = 0;
-
-            for (auto entry = old_table; entry != old_table + old_capacity; ++entry)
-                if (*entry != invalid_index)
-                {
-                    auto new_entry = lookup_entry(symbols, symbols.c_str(*entry));
-                    DRYAD_ASSERT(*new_entry == invalid_index, "we don't have duplicates");
-                    // The index didn't change, so copy over.
-                    *new_entry = *entry;
-                }
-        }
-    }
-    template <typename ResourcePtr>
-    void rehash(ResourcePtr resource, const symbol_buffer<CharT>& symbols)
-    {
-        rehash(resource, symbols, 2 * _table_capacity);
+        std::memset(data, static_cast<unsigned char>(-1), size * sizeof(IndexType));
     }
 
-    // Looks for the string in the table.
-    //
-    // If it is already in the table, returns a pointer to its index which is != invalid_index.
-    //
-    // Otherwise, locates a new entry for that string and returns a pointer to it which stores
-    // invalid_index. Invariants of map are broken until the ptr has been written to.
-    IndexType* lookup_entry(const symbol_buffer<CharT>& symbols, const CharT* str)
+    static constexpr bool is_equal(IndexType entry, IndexType value)
     {
-        DRYAD_PRECONDITION(_table_size < _table_capacity);
-
-        auto hash      = string_hash(str);
-        auto table_idx = hash & (_table_capacity - 1);
-        auto entry     = _table + table_idx;
-
-        while (true)
-        {
-            if (*entry == invalid_index)
-            {
-                // We found an empty entry, return it.
-                ++_table_size;
-                return entry;
-            }
-
-            // Check whether the entry is the same string.
-            if (auto existing_str = symbols.c_str(*entry); std::strcmp(str, existing_str) == 0)
-            {
-                // It is already in the table.
-                // Return the occupied entry.
-                return &_table[table_idx];
-            }
-
-            // Go to next entry.
-            ++entry;
-            if (entry == _table + _table_capacity)
-                entry = _table;
-        }
+        return entry == value;
+    }
+    bool is_equal(IndexType entry, const CharT* str) const
+    {
+        auto existing_str = buffer->c_str(entry);
+        return std::strcmp(str, existing_str) == 0;
     }
 
-    bool should_rehash() const
+    std::size_t hash(IndexType entry) const
     {
-        return _table_size >= _table_capacity / 2;
+        return hash(buffer->c_str(entry));
     }
-
-private:
-    static constexpr std::size_t to_table_capacity(unsigned long long cap)
+    static constexpr std::size_t hash(const CharT* str)
     {
-        if (cap < min_table_size)
-            return min_table_size;
-
-        // Round up to next power of two.
-        return std::size_t(1) << (int(sizeof(cap) * CHAR_BIT) - __builtin_clzll(cap - 1));
-    }
-
-    // FNV-1a 64 bit hash
-    static constexpr std::uint64_t string_hash(const CharT* str)
-    {
+        // FNV-1a 64 bit hash
         constexpr std::uint64_t fnv_basis = 14695981039346656037ull;
         constexpr std::uint64_t fnv_prime = 1099511628211ull;
 
@@ -224,10 +134,6 @@ private:
         }
         return result;
     }
-
-    IndexType*  _table;
-    std::size_t _table_capacity; // power of two
-    std::size_t _table_size;
 };
 } // namespace dryad::_detail
 
@@ -244,6 +150,7 @@ class symbol_interner
     static_assert(std::is_unsigned_v<IndexType>);
 
     using resource_ptr = _detail::memory_resource_ptr<MemoryResource>;
+    using traits       = _detail::symbol_index_hash_traits<IndexType, CharT>;
 
 public:
     using symbol = dryad::symbol<Id, IndexType>;
@@ -277,18 +184,18 @@ public:
     void reserve(std::size_t number_of_symbols, std::size_t average_symbol_length)
     {
         _buffer.reserve(_resource, number_of_symbols * average_symbol_length);
-        _map.rehash(_resource, _buffer, number_of_symbols);
+        _map.rehash(_resource, number_of_symbols, traits{&_buffer});
     }
 
     symbol intern(const CharT* str, std::size_t length)
     {
         if (_map.should_rehash())
-            _map.rehash(_resource, _buffer);
+            _map.rehash(_resource, traits{&_buffer});
 
-        auto entry = _map.lookup_entry(_buffer, str);
-        if (*entry != _map.invalid_index)
+        auto entry = _map.lookup_entry(str, traits{&_buffer});
+        if (entry)
             // Already interned, return index.
-            return symbol(*entry);
+            return symbol(entry.get());
 
         // Copy string data to buffer, as we don't have it yet.
         _buffer.reserve_new_string(_resource, length);
@@ -296,7 +203,7 @@ public:
         DRYAD_PRECONDITION(idx == IndexType(idx)); // Overflow of index type.
 
         // Store index in map.
-        *entry = IndexType(idx);
+        entry.create(IndexType(idx));
 
         // Return new symbol.
         return symbol(IndexType(idx));
@@ -309,9 +216,9 @@ public:
     }
 
 private:
-    _detail::symbol_buffer<CharT>                _buffer;
-    _detail::unique_symbol_map<CharT, IndexType> _map;
-    DRYAD_EMPTY_MEMBER resource_ptr              _resource;
+    _detail::symbol_buffer<CharT>     _buffer;
+    _detail::hash_table<traits, 1024> _map;
+    DRYAD_EMPTY_MEMBER resource_ptr   _resource;
 
     friend symbol;
 };
