@@ -27,3 +27,7 @@ endif()
 #=== tests ===#
 add_subdirectory(dryad)
 
+# Test interface library.
+add_executable(dryad_interface_test)
+target_link_libraries(dryad_interface_test PRIVATE dryad_test_base foonathan::dryad)
+
