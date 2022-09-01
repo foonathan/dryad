@@ -64,9 +64,22 @@ TEST_CASE("node")
     SUBCASE("list insert")
     {
         dryad::unlinked_node_list<node> list;
-        list.push_back(a);
         list.push_back(b);
         list.push_back(c);
+        list.push_front(a);
+
+        auto iter = list.begin();
+        CHECK(iter != list.end());
+        CHECK(*iter == a);
+        ++iter;
+        CHECK(iter != list.end());
+        CHECK(*iter == b);
+        ++iter;
+        CHECK(iter != list.end());
+        CHECK(*iter == c);
+        ++iter;
+        CHECK(iter == list.end());
+
         container->insert_front(list);
     }
     tree.set_root(container);

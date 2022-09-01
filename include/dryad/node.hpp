@@ -458,13 +458,63 @@ protected:
 namespace dryad
 {
 /// A list of nodes that haven't been linked into a tree yet.
-template <typename NodeType>
+template <typename T>
 class unlinked_node_list
 {
 public:
     unlinked_node_list() : _first(nullptr), _last(nullptr) {}
 
-    void push_back(NodeType* node)
+    //=== access ===//
+    bool empty() const
+    {
+        return _first != nullptr;
+    }
+
+    struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
+    {
+        T* _cur = nullptr;
+
+        T* deref() const
+        {
+            return _cur;
+        }
+        void increment()
+        {
+            _cur = _cur->next_node();
+        }
+        bool equal(iterator rhs) const
+        {
+            return _cur == rhs._cur;
+        }
+    };
+
+    iterator begin() const
+    {
+        return {{}, _first};
+    }
+    iterator end() const
+    {
+        return {{}, nullptr};
+    }
+
+    //=== modifiers ===//
+    void push_front(T* node)
+    {
+        DRYAD_PRECONDITION(!node->is_linked_in_tree());
+
+        if (_first == nullptr)
+        {
+            _first = node;
+            _last  = node;
+        }
+        else
+        {
+            node->set_next_sibling(_first);
+            _first = node;
+        }
+    }
+
+    void push_back(T* node)
     {
         DRYAD_PRECONDITION(!node->is_linked_in_tree());
         if (_last == nullptr)
@@ -480,8 +530,8 @@ public:
     }
 
 private:
-    NodeType* _first;
-    NodeType* _last;
+    T* _first;
+    T* _last;
 
     template <typename>
     friend class container_node;
