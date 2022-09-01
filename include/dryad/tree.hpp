@@ -10,6 +10,7 @@
 
 namespace dryad
 {
+/// Owns multiple nodes.
 template <typename NodeKind, typename MemoryResource = void>
 class tree
 {

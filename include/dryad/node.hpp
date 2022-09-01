@@ -370,6 +370,8 @@ private:
     void*          _user_data_ptr; // If it's a container, pointer to first child.
 
     template <typename>
+    friend class unlinked_node_list;
+    template <typename>
     friend class container_node;
     template <typename, typename>
     friend class tree;
@@ -455,6 +457,36 @@ protected:
 
 namespace dryad
 {
+/// A list of nodes that haven't been linked into a tree yet.
+template <typename NodeType>
+class unlinked_node_list
+{
+public:
+    unlinked_node_list() : _first(nullptr), _last(nullptr) {}
+
+    void push_back(NodeType* node)
+    {
+        DRYAD_PRECONDITION(!node->is_linked_in_tree());
+        if (_last == nullptr)
+        {
+            _first = node;
+            _last  = node;
+        }
+        else
+        {
+            _last->set_next_sibling(node);
+            _last = node;
+        }
+    }
+
+private:
+    NodeType* _first;
+    NodeType* _last;
+
+    template <typename>
+    friend class container_node;
+};
+
 /// Base class for all nodes that own child nodes, which should be traversed.
 template <typename AbstractBase>
 class container_node : public AbstractBase
@@ -495,6 +527,24 @@ protected:
     void insert_children_after(_node* pos, T*... children)
     {
         ((insert_child_after(pos, children), pos = children), ...);
+    }
+    template <typename T>
+    void insert_child_list_after(_node* pos, unlinked_node_list<T> list)
+    {
+        if (pos == nullptr)
+        {
+            if (auto first = first_child())
+                list._last->set_next_sibling(first);
+            else
+                list._last->set_next_parent(this);
+
+            set_first_child(list._first);
+        }
+        else
+        {
+            list._last->copy_next(pos);
+            pos->set_next_sibling(list._first);
+        }
     }
 
     /// Returns the child that was erased.

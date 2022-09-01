@@ -31,6 +31,10 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
     {
         this->insert_children_after(nullptr, ns...);
     }
+    void insert_front(dryad::unlinked_node_list<node> list)
+    {
+        this->insert_child_list_after(nullptr, list);
+    }
 
     auto children() const
     {
@@ -46,23 +50,30 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
 
 TEST_CASE("node")
 {
-    auto tree = [&] {
-        dryad::tree<node_kind> tree;
+    dryad::tree<node_kind> tree;
 
-        auto a = tree.create<leaf_node>();
-        auto b = tree.create<leaf_node>();
-        auto c = tree.create<leaf_node>();
+    auto a = tree.create<leaf_node>();
+    auto b = tree.create<leaf_node>();
+    auto c = tree.create<leaf_node>();
 
-        auto container = tree.create<container_node>();
+    auto container = tree.create<container_node>();
+    SUBCASE("variadic insert")
+    {
         container->insert_front(a, b, c);
-        tree.set_root(container);
+    }
+    SUBCASE("list insert")
+    {
+        dryad::unlinked_node_list<node> list;
+        list.push_back(a);
+        list.push_back(b);
+        list.push_back(c);
+        container->insert_front(list);
+    }
+    tree.set_root(container);
 
-        CHECK(container->first() == a);
-        CHECK(container->second() == b);
-        CHECK(container->third() == c);
-
-        return tree;
-    }();
+    CHECK(container->first() == a);
+    CHECK(container->second() == b);
+    CHECK(container->third() == c);
 
     auto node = tree.root();
     CHECK(node->is_linked_in_tree());
