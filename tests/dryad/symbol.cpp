@@ -29,6 +29,9 @@ TEST_CASE("symbol_interner")
     CHECK(abc1 == abc2);
     CHECK(abc1.c_str(symbols) == doctest::String("abc"));
 
+    auto abc3 = symbols.intern("abcd", 3);
+    CHECK(abc1 == abc3);
+
     SUBCASE("move construct")
     {
         auto other = DRYAD_MOV(symbols);

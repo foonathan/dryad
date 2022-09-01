@@ -95,6 +95,12 @@ struct symbol_index_hash_traits
 
     using value_type = IndexType;
 
+    struct string_view
+    {
+        const CharT* ptr;
+        std::size_t  length;
+    };
+
     static constexpr bool is_unoccupied(IndexType index)
     {
         return index == IndexType(-1);
@@ -109,26 +115,34 @@ struct symbol_index_hash_traits
     {
         return entry == value;
     }
-    bool is_equal(IndexType entry, const CharT* str) const
+    bool is_equal(IndexType entry, string_view str) const
     {
         auto existing_str = buffer->c_str(entry);
-        return std::strcmp(str, existing_str) == 0;
+        return std::strncmp(existing_str, str.ptr, str.length) == 0;
     }
+
+    // FNV-1a 64 bit hash
+    static constexpr std::uint64_t fnv_basis = 14695981039346656037ull;
+    static constexpr std::uint64_t fnv_prime = 1099511628211ull;
 
     std::size_t hash(IndexType entry) const
     {
-        return hash(buffer->c_str(entry));
-    }
-    static constexpr std::size_t hash(const CharT* str)
-    {
-        // FNV-1a 64 bit hash
-        constexpr std::uint64_t fnv_basis = 14695981039346656037ull;
-        constexpr std::uint64_t fnv_prime = 1099511628211ull;
-
+        auto str    = buffer->c_str(entry);
         auto result = fnv_basis;
         for (; *str != CharT(0); ++str)
         {
             auto byte = static_cast<std::make_unsigned_t<CharT>>(*str);
+            result ^= byte;
+            result *= fnv_prime;
+        }
+        return result;
+    }
+    static constexpr std::size_t hash(string_view str)
+    {
+        auto result = fnv_basis;
+        for (auto i = 0u; i != str.length; ++i)
+        {
+            auto byte = static_cast<std::make_unsigned_t<CharT>>(str.ptr[i]);
             result ^= byte;
             result *= fnv_prime;
         }
@@ -192,7 +206,7 @@ public:
         if (_map.should_rehash())
             _map.rehash(_resource, traits{&_buffer});
 
-        auto entry = _map.lookup_entry(str, traits{&_buffer});
+        auto entry = _map.lookup_entry(typename traits::string_view{str, length}, traits{&_buffer});
         if (entry)
             // Already interned, return index.
             return symbol(entry.get());
