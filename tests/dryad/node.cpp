@@ -34,6 +34,7 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
     void insert_front(dryad::unlinked_node_list<node> list)
     {
         this->insert_child_list_after(nullptr, list);
+        this->insert_child_list_after(nullptr, dryad::unlinked_node_list<node>());
     }
 
     auto children() const

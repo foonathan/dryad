@@ -467,7 +467,7 @@ public:
     //=== access ===//
     bool empty() const
     {
-        return _first != nullptr;
+        return _first == nullptr;
     }
 
     struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
@@ -581,6 +581,9 @@ protected:
     template <typename T>
     void insert_child_list_after(_node* pos, unlinked_node_list<T> list)
     {
+        if (list.empty())
+            return;
+
         if (pos == nullptr)
         {
             if (auto first = first_child())
