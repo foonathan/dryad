@@ -41,6 +41,8 @@ public:
             = static_cast<CharT*>(resource->allocate(new_capacity * sizeof(CharT), alignof(CharT)));
         if (_size > 0)
             std::memcpy(new_data, _data, _size * sizeof(CharT));
+        if (_capacity > 0)
+            resource->deallocate(_data, _capacity * sizeof(CharT), alignof(CharT));
 
         _data     = new_data;
         _capacity = new_capacity;

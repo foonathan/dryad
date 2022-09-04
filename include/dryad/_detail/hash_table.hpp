@@ -178,6 +178,9 @@ public:
                     entry_cb(new_entry, std::size_t(entry - old_table));
                 }
         }
+
+        if (old_capacity > 0)
+            resource->deallocate(old_table, old_capacity * sizeof(value_type), alignof(value_type));
     }
     template <typename ResourcePtr, typename Callback = void (*)(entry_handle, std::size_t)>
     void rehash(

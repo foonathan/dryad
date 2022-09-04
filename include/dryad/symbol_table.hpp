@@ -141,8 +141,9 @@ public:
     //=== modifiers ===//
     void rehash(std::size_t new_capacity)
     {
-        new_capacity = _table.to_table_capacity(new_capacity);
-        if (new_capacity <= _table.capacity())
+        new_capacity  = _table.to_table_capacity(new_capacity);
+        auto capacity = _table.capacity();
+        if (new_capacity <= capacity)
             return;
 
         auto new_decls = static_cast<DeclRef*>(
@@ -152,6 +153,10 @@ public:
             // Copy the entries over.
             new_decls[new_entry.index()] = _decls[old_idx];
         });
+
+        if (capacity > 0)
+            _resource->deallocate(_decls, capacity * sizeof(DeclRef), alignof(DeclRef));
+
         _decls = new_decls;
     }
 

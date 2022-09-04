@@ -172,8 +172,9 @@ public:
     //=== modifiers ===//
     void rehash(std::size_t new_capacity)
     {
-        new_capacity = _table.to_table_capacity(new_capacity);
-        if (new_capacity <= _table.capacity())
+        new_capacity  = _table.to_table_capacity(new_capacity);
+        auto capacity = _table.capacity();
+        if (new_capacity <= capacity)
             return;
 
         if constexpr (std::is_void_v<Value>)
@@ -191,6 +192,10 @@ public:
                 ::new (&new_values[new_idx]) Value(DRYAD_MOV(_values[old_idx]));
                 _values[old_idx].~Value();
             });
+
+            if (capacity > 0)
+                _resource->deallocate(_values, capacity * sizeof(Value), alignof(Value));
+
             _values = new_values;
         }
     }
