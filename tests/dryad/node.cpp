@@ -147,15 +147,23 @@ TEST_CASE("visit_node")
     auto container = tree.create<container_node>();
     container->insert_front(a, b, c);
 
-    SUBCASE("without traverse_event")
+    SUBCASE("basic")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
 
         auto visit = [&](auto node) {
-            dryad::visit_node_all(
-                node, [&](leaf_node*) { ++leaf_count; },
-                [&](container_node*) { ++container_count; });
+            auto result = dryad::visit_node_all(
+                node,
+                [&](leaf_node*) {
+                    ++leaf_count;
+                    return 0;
+                },
+                [&](container_node*) {
+                    ++container_count;
+                    return 0;
+                });
+            CHECK(result == 0);
         };
         visit(a);
         visit(b);
@@ -171,8 +179,17 @@ TEST_CASE("visit_node")
         auto node_count = 0;
 
         auto visit = [&](auto n) {
-            dryad::visit_node_all(
-                n, [&](node*) { ++node_count; }, [&](leaf_node*) { ++leaf_count; });
+            auto result = dryad::visit_node_all(
+                n,
+                [&](node*) {
+                    ++node_count;
+                    return 0;
+                },
+                [&](leaf_node*) {
+                    ++leaf_count;
+                    return 0;
+                });
+            CHECK(result == 0);
         };
         visit(a);
         visit(b);

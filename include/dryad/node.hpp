@@ -858,25 +858,27 @@ struct _node_types_for_lambdas<>
 {
     using type = node_type_list<>;
 };
-template <typename Lambda, typename T, void (Lambda::*Ptr)(T*), auto... Tail>
+template <typename Ret, typename Lambda, typename T, Ret (Lambda::*Ptr)(T*), auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
     using type = typename tail::template insert<T>;
 };
-template <typename Lambda, typename T, void (Lambda::*Ptr)(T*) const, auto... Tail>
+template <typename Ret, typename Lambda, typename T, Ret (Lambda::*Ptr)(T*) const, auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
     using type = typename tail::template insert<T>;
 };
-template <typename Lambda, typename Ev, typename T, void (Lambda::*Ptr)(Ev, T*), auto... Tail>
+template <typename Ret, typename Lambda, typename Ev, typename T, Ret (Lambda::*Ptr)(Ev, T*),
+          auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
     using type = typename tail::template insert<T>;
 };
-template <typename Lambda, typename Ev, typename T, void (Lambda::*Ptr)(Ev, T*) const, auto... Tail>
+template <typename Ret, typename Lambda, typename Ev, typename T, Ret (Lambda::*Ptr)(Ev, T*) const,
+          auto... Tail>
 struct _node_types_for_lambdas<Ptr, Tail...>
 {
     using tail = typename _node_types_for_lambdas<Tail...>::type;
@@ -894,7 +896,7 @@ struct _visit_node;
 template <typename... NodeTypes, typename... Lambdas>
 struct _visit_node<_detail::node_type_list<NodeTypes...>, Lambdas...>
 {
-    template <bool All = false, typename Node>
+    template <typename Node>
     DRYAD_FORCE_INLINE static void visit(Node* node, Lambdas&&... lambdas)
     {
         auto                  kind = node->kind();
@@ -902,9 +904,30 @@ struct _visit_node<_detail::node_type_list<NodeTypes...>, Lambdas...>
             = ((NodeTypes::type_matches_kind(kind) ? (lambdas(static_cast<NodeTypes*>(node)), true)
                                                    : false)
                || ...);
+    }
+};
 
-        if constexpr (All)
-            DRYAD_ASSERT(found_callback, "missing type for callback");
+template <typename NodeTypeList, typename... Lambdas>
+struct _visit_node_all;
+template <typename H, typename... T, typename HLambda, typename... TLambda>
+struct _visit_node_all<_detail::node_type_list<H, T...>, HLambda, TLambda...>
+{
+    template <typename Node>
+    DRYAD_FORCE_INLINE static auto visit(Node* node, HLambda&& head, TLambda&&... tail)
+    {
+        auto kind = node->kind();
+        if constexpr (sizeof...(T) == 0)
+        {
+            DRYAD_ASSERT(H::type_matches_kind(kind), "missing visitor");
+            return head(static_cast<H*>(node));
+        }
+        else
+        {
+            return H::type_matches_kind(kind)
+                       ? head(static_cast<H*>(node))
+                       : _visit_node_all<_detail::node_type_list<T...>,
+                                         TLambda...>::visit(node, DRYAD_FWD(tail)...);
+        }
     }
 };
 
@@ -923,21 +946,21 @@ template <typename NodeKind, typename... Lambdas>
 void visit_node(const node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_node<node_types, Lambdas...>::visit(node, DRYAD_FWD(lambdas)...);
+    return _visit_node<node_types, Lambdas...>::visit(node, DRYAD_FWD(lambdas)...);
 }
 
 /// Same as above, but it is an error if a node cannot be visited.
 template <typename NodeKind, typename... Lambdas>
-void visit_node_all(node<NodeKind>* node, Lambdas&&... lambdas)
+auto visit_node_all(node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_node<node_types, Lambdas...>::template visit<true>(node, DRYAD_FWD(lambdas)...);
+    return _visit_node_all<node_types, Lambdas...>::template visit(node, DRYAD_FWD(lambdas)...);
 }
 template <typename NodeKind, typename... Lambdas>
-void visit_node_all(const node<NodeKind>* node, Lambdas&&... lambdas)
+auto visit_node_all(const node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_node<node_types, Lambdas...>::template visit<true>(node, DRYAD_FWD(lambdas)...);
+    return _visit_node_all<node_types, Lambdas...>::template visit(node, DRYAD_FWD(lambdas)...);
 }
 } // namespace dryad
 
