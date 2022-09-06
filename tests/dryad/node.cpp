@@ -72,11 +72,7 @@ TEST_CASE("node")
         CHECK(!list.empty());
         CHECK(list.has_single_element());
 
-        list.append([&] {
-            dryad::unlinked_node_list<node> list;
-            list.push_back(c);
-            return list;
-        }());
+        list.append(c);
         CHECK(!list.empty());
         CHECK(!list.has_single_element());
 

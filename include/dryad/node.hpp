@@ -464,6 +464,11 @@ class unlinked_node_list
 public:
     unlinked_node_list() : _first(nullptr), _last(nullptr) {}
 
+    unlinked_node_list(T* node) : unlinked_node_list()
+    {
+        push_back(node);
+    }
+
     //=== access ===//
     bool empty() const
     {
