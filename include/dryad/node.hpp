@@ -507,6 +507,15 @@ public:
         return {{}, nullptr};
     }
 
+    T* front() const
+    {
+        return _first;
+    }
+    T* back() const
+    {
+        return _last;
+    }
+
     //=== modifiers ===//
     void push_front(T* node)
     {
