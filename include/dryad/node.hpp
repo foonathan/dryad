@@ -470,6 +470,11 @@ public:
         return _first == nullptr;
     }
 
+    bool has_single_element() const
+    {
+        return _first != nullptr && _first == _last;
+    }
+
     struct iterator : _detail::forward_iterator_base<iterator, T*, T*, void>
     {
         T* _cur = nullptr;
@@ -527,6 +532,24 @@ public:
             _last->set_next_sibling(node);
             _last = node;
         }
+    }
+
+    void append(unlinked_node_list<T>&& list)
+    {
+        if (list.empty())
+            return;
+
+        if (empty())
+        {
+            *this = list;
+        }
+        else
+        {
+            _last->set_next_sibling(list._first);
+            _last = list._last;
+        }
+
+        list._first = list._last = nullptr;
     }
 
 private:

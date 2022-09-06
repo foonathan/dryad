@@ -65,9 +65,24 @@ TEST_CASE("node")
     SUBCASE("list insert")
     {
         dryad::unlinked_node_list<node> list;
+        CHECK(list.empty());
+        CHECK(list.begin() == list.end());
+
         list.push_back(b);
-        list.push_back(c);
+        CHECK(!list.empty());
+        CHECK(list.has_single_element());
+
+        list.append([&] {
+            dryad::unlinked_node_list<node> list;
+            list.push_back(c);
+            return list;
+        }());
+        CHECK(!list.empty());
+        CHECK(!list.has_single_element());
+
         list.push_front(a);
+        CHECK(!list.empty());
+        CHECK(!list.has_single_element());
 
         auto iter = list.begin();
         CHECK(iter != list.end());
