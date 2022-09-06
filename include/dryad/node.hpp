@@ -485,7 +485,7 @@ public:
         }
         void increment()
         {
-            _cur = _cur->next_node();
+            _cur = static_cast<T*>(_cur->next_node());
         }
         bool equal(iterator rhs) const
         {
