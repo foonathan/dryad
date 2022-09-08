@@ -143,6 +143,10 @@ public:
             {
                 return {{}, ptr};
             }
+            static iterator from_ptr(iterator iter)
+            {
+                return iter;
+            }
 
             operator typename _sibling_range<const T>::iterator() const
             {
@@ -221,7 +225,11 @@ public:
 
             static iterator from_ptr(T* ptr)
             {
-                return {ptr};
+                return {{}, ptr};
+            }
+            static iterator from_ptr(iterator iter)
+            {
+                return iter;
             }
 
             operator typename _children_range<const T>::iterator() const
@@ -746,6 +754,34 @@ private:
     {                                                                                              \
         return ::dryad::node_cast<Type>(this->child_after(PrevChild));                             \
     }
+
+#define DRYAD_CHILD_NODE_RANGE_GETTER(Type, Name, PrevChild, NextChild)                            \
+    auto Name()                                                                                    \
+    {                                                                                              \
+        using iterator  = typename decltype(this->children())::iterator;                           \
+        auto next_child = NextChild;                                                               \
+        if (next_child == nullptr)                                                                 \
+            return ::dryad::make_node_range<Type>(iterator::from_ptr(                              \
+                                                      this->child_after(PrevChild)),               \
+                                                  this->children().end());                         \
+        else                                                                                       \
+            return ::dryad::make_node_range<Type>(iterator::from_ptr(                              \
+                                                      this->child_after(PrevChild)),               \
+                                                  iterator::from_ptr(next_child));                 \
+    }                                                                                              \
+    auto Name() const                                                                              \
+    {                                                                                              \
+        using iterator  = typename decltype(this->children())::iterator;                           \
+        auto next_child = NextChild;                                                               \
+        if (next_child == nullptr)                                                                 \
+            return ::dryad::make_node_range<Type>(iterator::from_ptr(                              \
+                                                      this->child_after(PrevChild)),               \
+                                                  this->children().end());                         \
+        else                                                                                       \
+            return ::dryad::make_node_range<Type>(iterator::from_ptr(                              \
+                                                      this->child_after(PrevChild)),               \
+                                                  iterator::from_ptr(next_child));                 \
+    }
 } // namespace dryad
 
 namespace dryad
@@ -949,8 +985,8 @@ struct _visit_node_all<_detail::node_type_list<H, T...>, HLambda, TLambda...>
 /// Visits the node invoking the appropriate lambda for each node type.
 ///
 /// It will try each lambda in the order specified, NodeType can be abstract in which case it
-/// swallows all. Only one lambda will be invoked. If the type of a node does not match any lambda,
-/// it will not be invoked.
+/// swallows all. Only one lambda will be invoked. If the type of a node does not match any
+/// lambda, it will not be invoked.
 template <typename NodeKind, typename... Lambdas>
 void visit_node(node<NodeKind>* node, Lambdas&&... lambdas)
 {
