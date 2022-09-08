@@ -10,7 +10,7 @@
 
 namespace dryad
 {
-/// Owns multiple nodes.
+/// Owns multiple nodes, eventually all children of a single root node.
 template <typename NodeKind, typename RootNode = node<NodeKind>, typename MemoryResource = void>
 class tree
 {
@@ -18,11 +18,6 @@ public:
     //=== construction ===//
     tree() = default;
     explicit tree(MemoryResource* resource) : _arena(resource) {}
-
-    tree(tree&&) noexcept            = default;
-    tree& operator=(tree&&) noexcept = default;
-
-    ~tree() = default;
 
     //=== node creation ===//
     /// Creates a node of type T that is not yet linked into the tree.
@@ -61,6 +56,48 @@ public:
 private:
     arena<MemoryResource> _arena;
     RootNode*             _root = nullptr;
+};
+
+/// Owns multiple nodes, eventually all children of a list of root nodes.
+template <typename NodeKind, typename RootNode = node<NodeKind>, typename MemoryResource = void>
+class forest
+{
+public:
+    //=== construction ===//
+    forest() = default;
+    explicit forest(MemoryResource* resource) : _arena(resource) {}
+
+    //=== node creation ===//
+    /// Creates a node of type T that is not yet linked into the tree.
+    template <typename T, typename... Args>
+    T* create(Args&&... args)
+    {
+        static_assert(is_node<T, NodeKind> && !is_abstract_node<T, NodeKind>);
+        static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
+
+        return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);
+    }
+
+    void insert_root(RootNode* root)
+    {
+        _roots.push_back(root);
+        _roots.back()->set_next_sibling(_roots.front());
+    }
+    void insert_root_list(unlinked_node_list<RootNode>&& nodes)
+    {
+        _roots.append(DRYAD_MOV(nodes));
+        _roots.back()->set_next_sibling(_roots.front());
+    }
+
+    //=== root nodes ===//
+    auto roots() const
+    {
+        return make_node_range(_roots.begin(), _roots.end());
+    }
+
+private:
+    arena<MemoryResource>        _arena;
+    unlinked_node_list<RootNode> _roots;
 };
 } // namespace dryad
 

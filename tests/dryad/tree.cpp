@@ -4,6 +4,7 @@
 #include <dryad/tree.hpp>
 
 #include <doctest/doctest.h>
+#include <iterator>
 
 namespace
 {
@@ -34,6 +35,7 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
 TEST_CASE("tree")
 {
     dryad::tree<node_kind, container_node> tree;
+    CHECK(!tree.has_root());
     CHECK(tree.root() == nullptr);
 
     SUBCASE("basic")
@@ -78,6 +80,40 @@ TEST_CASE("tree")
         ++iter;
         CHECK(iter == range.end());
     }
+}
+
+TEST_CASE("forest")
+{
+    dryad::forest<node_kind, container_node> forest;
+    CHECK(forest.roots().empty());
+
+    auto a = forest.create<leaf_node>();
+    auto b = forest.create<leaf_node>();
+    auto c = forest.create<leaf_node>();
+    auto d = forest.create<leaf_node>();
+
+    auto root1 = forest.create<container_node>();
+    root1->insert_front(c);
+    root1->insert_front(b);
+    root1->insert_front(a);
+    forest.insert_root(root1);
+
+    CHECK(!forest.roots().empty());
+    CHECK(forest.roots().front() == root1);
+    CHECK(root1->parent() == root1);
+
+    auto root2 = forest.create<container_node>();
+    root2->insert_front(d);
+    forest.insert_root_list(root2);
+
+    CHECK(!forest.roots().empty());
+    CHECK(forest.roots().front() == root1);
+    CHECK(*std::next(forest.roots().begin()) == root2);
+    CHECK(root1->parent() == root1);
+    CHECK(root2->parent() == root2);
+
+    dryad::visit_tree(root1, [&](node* ptr) { CHECK(ptr != d); });
+    dryad::visit_tree(root2, [&](node* ptr) { CHECK((ptr == root2 || ptr == d)); });
 }
 
 TEST_CASE("visit_tree")

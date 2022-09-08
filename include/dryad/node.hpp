@@ -70,6 +70,8 @@ class node_ctor
 
     template <typename, typename, typename>
     friend class tree;
+    template <typename, typename, typename>
+    friend class forest;
 };
 
 /// Type-erased base class for all nodes in the AST.
@@ -115,7 +117,12 @@ public:
         // If we follow the sibling pointer repeatedly, we end up at the parent eventually.
         auto cur = this;
         while (!cur->next_node_is_parent())
+        {
             cur = cur->next_node();
+            // In a forest, root nodes are in a circular linked list.
+            if (cur == this)
+                return cur;
+        }
         return cur->next_node();
     }
     node* parent()
@@ -375,6 +382,8 @@ private:
     friend class container_node;
     template <typename, typename, typename>
     friend class tree;
+    template <typename, typename, typename>
+    friend class forest;
     template <typename>
     friend class _traverse_range;
 };
@@ -780,7 +789,8 @@ const T* node_try_cast(const node<NodeKind>* ptr)
 
 namespace dryad
 {
-template <typename NodeIterator, typename NodeType = typename NodeIterator::value_type>
+template <typename NodeIterator,
+          typename NodeType = std::remove_pointer_t<typename NodeIterator::value_type>>
 struct node_range
 {
     NodeIterator _begin;
@@ -824,7 +834,7 @@ struct node_range
         return {{}, _end};
     }
 
-    NodeType* front() const
+    _value_type front() const
     {
         return *begin();
     }
