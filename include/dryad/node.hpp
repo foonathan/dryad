@@ -141,7 +141,7 @@ public:
 
             static iterator from_ptr(T* ptr)
             {
-                return {ptr};
+                return {{}, ptr};
             }
 
             operator typename _sibling_range<const T>::iterator() const
@@ -528,6 +528,8 @@ public:
     //=== modifiers ===//
     void push_front(T* node)
     {
+        if (node == nullptr)
+            return;
         DRYAD_PRECONDITION(!node->is_linked_in_tree());
 
         if (_first == nullptr)
@@ -544,7 +546,10 @@ public:
 
     void push_back(T* node)
     {
+        if (node == nullptr)
+            return;
         DRYAD_PRECONDITION(!node->is_linked_in_tree());
+
         if (_last == nullptr)
         {
             _first = node;
