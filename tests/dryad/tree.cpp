@@ -193,5 +193,16 @@ TEST_CASE("visit_tree")
 
         CHECK(leaf_count == 3);
     }
+    SUBCASE("mutable")
+    {
+        auto leaf_count      = 0;
+        auto container_count = 0;
+        dryad::visit_tree(
+            tree, [&](dryad::traverse_event, leaf_node*) mutable { ++leaf_count; },
+            [&](dryad::traverse_event, container_node*) mutable { ++container_count; });
+
+        CHECK(leaf_count == 3);
+        CHECK(container_count == 2);
+    }
 }
 

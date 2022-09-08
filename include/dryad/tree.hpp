@@ -340,8 +340,7 @@ struct _visit_tree<NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas...>
         auto range = dryad::traverse(tree_or_node);
         for (auto iter = range.begin(); iter != range.end(); ++iter)
         {
-            (void)(call<NodeTypes>(_detail::priority_tag<4>{}, iter,
-                                   static_cast<const Lambdas&>(*this))
+            (void)(call<NodeTypes>(_detail::priority_tag<4>{}, iter, static_cast<Lambdas&>(*this))
                    || ...);
         }
     }
