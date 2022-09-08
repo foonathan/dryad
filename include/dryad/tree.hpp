@@ -11,7 +11,7 @@
 namespace dryad
 {
 /// Owns multiple nodes.
-template <typename NodeKind, typename MemoryResource = void>
+template <typename NodeKind, typename RootNode = node<NodeKind>, typename MemoryResource = void>
 class tree
 {
 public:
@@ -36,16 +36,21 @@ public:
     }
 
     //=== root node ===//
-    node<NodeKind>* root()
+    bool has_root() const
+    {
+        return _root != nullptr;
+    }
+
+    RootNode* root()
     {
         return _root;
     }
-    const node<NodeKind>* root() const
+    const RootNode* root() const
     {
         return _root;
     }
 
-    void set_root(node<NodeKind>* root)
+    void set_root(RootNode* root)
     {
         DRYAD_PRECONDITION(root != nullptr);
         DRYAD_PRECONDITION(!root->is_linked_in_tree());
@@ -55,7 +60,7 @@ public:
 
 private:
     arena<MemoryResource> _arena;
-    node<NodeKind>*       _root = nullptr;
+    RootNode*             _root = nullptr;
 };
 } // namespace dryad
 

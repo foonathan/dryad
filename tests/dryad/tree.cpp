@@ -33,7 +33,7 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
 
 TEST_CASE("tree")
 {
-    dryad::tree<node_kind> tree;
+    dryad::tree<node_kind, container_node> tree;
     CHECK(tree.root() == nullptr);
 
     SUBCASE("basic")
