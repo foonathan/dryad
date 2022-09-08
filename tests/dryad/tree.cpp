@@ -100,7 +100,7 @@ TEST_CASE("visit_tree")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
-        dryad::visit_tree_all(
+        dryad::visit_tree(
             tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; },
             [&](dryad::traverse_event, container_node*) { ++container_count; });
 
@@ -111,7 +111,7 @@ TEST_CASE("visit_tree")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
-        dryad::visit_tree_all(
+        dryad::visit_tree(
             tree, [&](dryad::traverse_event_enter, leaf_node*) { ++leaf_count; },
             [&](dryad::traverse_event_enter, container_node*) { ++container_count; });
 
@@ -122,7 +122,7 @@ TEST_CASE("visit_tree")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
-        dryad::visit_tree_all(
+        dryad::visit_tree(
             tree, [&](dryad::traverse_event_exit, leaf_node*) { ++leaf_count; },
             [&](dryad::traverse_event_exit, container_node*) { ++container_count; });
 
@@ -133,7 +133,7 @@ TEST_CASE("visit_tree")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
-        dryad::visit_tree_all(
+        dryad::visit_tree(
             tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; },
             [&](dryad::child_visitor<node_kind> visitor, container_node* node) {
                 ++container_count;
@@ -147,7 +147,7 @@ TEST_CASE("visit_tree")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
-        dryad::visit_tree_all(
+        dryad::visit_tree(
             tree, [&](leaf_node*) { ++leaf_count; }, [&](container_node*) { ++container_count; });
 
         CHECK(leaf_count == 3);
@@ -157,23 +157,34 @@ TEST_CASE("visit_tree")
     {
         auto leaf_count      = 0;
         auto container_count = 0;
-        dryad::visit_tree_all(
+        dryad::visit_tree(
             tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; },
             dryad::ignore_node<container_node>);
 
         CHECK(leaf_count == 0);
         CHECK(container_count == 0);
     }
-    SUBCASE("catch all")
+    SUBCASE("catch all first")
     {
         auto leaf_count = 0;
         auto node_count = 0;
-        dryad::visit_tree_all(
+        dryad::visit_tree(
             tree, [&](dryad::traverse_event, node*) { ++node_count; },
             [&](dryad::traverse_event, leaf_node*) { ++leaf_count; });
 
-        CHECK(leaf_count == 0);
+        CHECK(leaf_count == 3);
         CHECK(node_count == 5);
+    }
+    SUBCASE("catch all last")
+    {
+        auto leaf_count = 0;
+        auto node_count = 0;
+        dryad::visit_tree(
+            tree, [&](dryad::traverse_event, leaf_node*) { ++leaf_count; },
+            [&](dryad::traverse_event, node*) { ++node_count; });
+
+        CHECK(leaf_count == 3);
+        CHECK(node_count == 2);
     }
     SUBCASE("leaf only")
     {

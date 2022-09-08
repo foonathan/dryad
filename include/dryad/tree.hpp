@@ -248,10 +248,10 @@ template <typename NodeType>
 constexpr auto ignore_node
     = [](child_visitor<typename NodeType::node_kind_type>, const NodeType*) {};
 
-template <bool All, typename NodeKind, typename NodeTypeList, typename... Lambdas>
+template <typename NodeKind, typename NodeTypeList, typename... Lambdas>
 struct _visit_tree;
-template <bool All, typename NodeKind, typename... NodeTypes, typename... Lambdas>
-struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas...>
+template <typename NodeKind, typename... NodeTypes, typename... Lambdas>
+struct _visit_tree<NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas...>
 : std::decay_t<Lambdas>...
 {
     using node_kind                = std::decay_t<NodeKind>;
@@ -284,7 +284,7 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
             lambda(child_visitor<node_kind>{this, child_visit}, node);
             iter.skip_children();
         }
-        return true;
+        return !is_abstract_node<T, node_kind>;
     }
     template <typename T, typename Iter, typename Lambda>
     DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<3>, Iter& iter, Lambda& lambda)
@@ -295,7 +295,7 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
             return false;
 
         lambda(iter->event, node);
-        return true;
+        return !is_abstract_node<T, node_kind>;
     }
     template <typename T, typename Iter, typename Lambda>
     DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda& lambda)
@@ -307,7 +307,7 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
 
         if (iter->event == traverse_event::enter)
             lambda(traverse_event_enter{}, node);
-        return true;
+        return !is_abstract_node<T, node_kind>;
     }
     template <typename T, typename Iter, typename Lambda>
     DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda& lambda)
@@ -319,7 +319,7 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
 
         if (iter->event == traverse_event::exit)
             lambda(traverse_event_exit{}, node);
-        return true;
+        return !is_abstract_node<T, node_kind>;
     }
     template <typename T, typename Iter, typename Lambda>
     DRYAD_FORCE_INLINE static auto call(_detail::priority_tag<2>, Iter& iter, Lambda& lambda)
@@ -331,7 +331,7 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
 
         if (iter->event != traverse_event::exit)
             lambda(node);
-        return true;
+        return !is_abstract_node<T, node_kind>;
     }
 
     template <typename TreeOrNode>
@@ -340,12 +340,9 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
         auto range = dryad::traverse(tree_or_node);
         for (auto iter = range.begin(); iter != range.end(); ++iter)
         {
-            [[maybe_unused]] auto found_callback
-                = (call<NodeTypes>(_detail::priority_tag<4>{}, iter,
+            (void)(call<NodeTypes>(_detail::priority_tag<4>{}, iter,
                                    static_cast<const Lambdas&>(*this))
                    || ...);
-            if constexpr (All)
-                DRYAD_ASSERT(found_callback, "missing type for callback");
         }
     }
 };
@@ -362,20 +359,23 @@ struct _visit_tree<All, NodeKind, _detail::node_type_list<NodeTypes...>, Lambdas
 ///   not for any child nodes. Children have to be visited manually by passing them to the
 ///   child_visitor.
 ///
-/// It will try each lambda in the order specified, NodeType can be abstract in which case it
-/// swallows all. Only one lambda will be invoked. If the type of a node does not match any lambda,
-/// it will not be invoked.
+/// It will try each lambda in the order specified and stop once it founds a lambda taking a
+/// non-abstract NodeType that would have been invoked if the event matches. If the type matches but
+/// the event does not, it will not invoke the lambda but still stop searching for more lambdas.
+///
+/// If a lambda takes an abstract NodeType, continues looking for more lambdas to invoke. As such
+/// they need to be specified first, as concrete types that come before swallow the node.
 template <typename NodeKind, typename... Lambdas>
 void visit_tree(node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_tree<false, NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
+    _visit_tree<NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
 }
 template <typename NodeKind, typename... Lambdas>
 void visit_tree(const node<NodeKind>* node, Lambdas&&... lambdas)
 {
     using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_tree<false, const NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
+    _visit_tree<const NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
 }
 template <typename NodeKind, typename MemoryResource, typename... Lambdas>
 void visit_tree(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
@@ -386,30 +386,6 @@ template <typename NodeKind, typename MemoryResource, typename... Lambdas>
 void visit_tree(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
 {
     visit_tree(tree.root(), DRYAD_FWD(lambdas)...);
-}
-
-/// Same as above, but it is an error if a node cannot be visited.
-template <typename NodeKind, typename... Lambdas>
-void visit_tree_all(node<NodeKind>* node, Lambdas&&... lambdas)
-{
-    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_tree<true, NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
-}
-template <typename NodeKind, typename... Lambdas>
-void visit_tree_all(const node<NodeKind>* node, Lambdas&&... lambdas)
-{
-    using node_types = _detail::node_types_for_lambdas<std::decay_t<Lambdas>...>;
-    _visit_tree<true, const NodeKind, node_types, Lambdas...>(DRYAD_FWD(lambdas)...).visit(node);
-}
-template <typename NodeKind, typename MemoryResource, typename... Lambdas>
-void visit_tree_all(tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
-{
-    visit_tree_all(tree.root(), DRYAD_FWD(lambdas)...);
-}
-template <typename NodeKind, typename MemoryResource, typename... Lambdas>
-void visit_tree_all(const tree<NodeKind, MemoryResource>& tree, Lambdas&&... lambdas)
-{
-    visit_tree_all(tree.root(), DRYAD_FWD(lambdas)...);
 }
 } // namespace dryad
 
