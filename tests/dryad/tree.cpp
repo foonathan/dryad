@@ -38,54 +38,61 @@ TEST_CASE("tree")
     CHECK(!tree.has_root());
     CHECK(tree.root() == nullptr);
 
-    SUBCASE("basic")
+    SUBCASE("clear")
     {
-        auto a = tree.create<leaf_node>();
-        auto b = tree.create<leaf_node>();
-        auto c = tree.create<leaf_node>();
-
-        auto container = tree.create<container_node>();
-        container->insert_front(c);
-        container->insert_front(b);
-        container->insert_front(a);
-        tree.set_root(container);
-        CHECK(tree.root() == container);
-
-        auto range = dryad::traverse(tree);
-        auto iter  = range.begin();
-        REQUIRE(iter != range.end());
-        CHECK(iter->event == dryad::traverse_event::enter);
-        CHECK(iter->node == container);
-
-        ++iter;
-        REQUIRE(iter != range.end());
-        CHECK(iter->event == dryad::traverse_event::leaf);
-        CHECK(iter->node == a);
-
-        ++iter;
-        REQUIRE(iter != range.end());
-        CHECK(iter->event == dryad::traverse_event::leaf);
-        CHECK(iter->node == b);
-
-        ++iter;
-        REQUIRE(iter != range.end());
-        CHECK(iter->event == dryad::traverse_event::leaf);
-        CHECK(iter->node == c);
-
-        ++iter;
-        REQUIRE(iter != range.end());
-        CHECK(iter->event == dryad::traverse_event::exit);
-        CHECK(iter->node == container);
-
-        ++iter;
-        CHECK(iter == range.end());
+        tree.clear();
     }
+
+    auto a = tree.create<leaf_node>();
+    auto b = tree.create<leaf_node>();
+    auto c = tree.create<leaf_node>();
+
+    auto container = tree.create<container_node>();
+    container->insert_front(c);
+    container->insert_front(b);
+    container->insert_front(a);
+    tree.set_root(container);
+    CHECK(tree.root() == container);
+
+    auto range = dryad::traverse(tree);
+    auto iter  = range.begin();
+    REQUIRE(iter != range.end());
+    CHECK(iter->event == dryad::traverse_event::enter);
+    CHECK(iter->node == container);
+
+    ++iter;
+    REQUIRE(iter != range.end());
+    CHECK(iter->event == dryad::traverse_event::leaf);
+    CHECK(iter->node == a);
+
+    ++iter;
+    REQUIRE(iter != range.end());
+    CHECK(iter->event == dryad::traverse_event::leaf);
+    CHECK(iter->node == b);
+
+    ++iter;
+    REQUIRE(iter != range.end());
+    CHECK(iter->event == dryad::traverse_event::leaf);
+    CHECK(iter->node == c);
+
+    ++iter;
+    REQUIRE(iter != range.end());
+    CHECK(iter->event == dryad::traverse_event::exit);
+    CHECK(iter->node == container);
+
+    ++iter;
+    CHECK(iter == range.end());
 }
 
 TEST_CASE("forest")
 {
     dryad::forest<node_kind, container_node> forest;
     CHECK(forest.roots().empty());
+
+    SUBCASE("clear")
+    {
+        forest.clear();
+    }
 
     auto a = forest.create<leaf_node>();
     auto b = forest.create<leaf_node>();

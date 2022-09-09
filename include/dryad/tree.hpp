@@ -30,6 +30,12 @@ public:
         return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);
     }
 
+    void clear()
+    {
+        _root = nullptr;
+        _arena.clear();
+    }
+
     //=== root node ===//
     bool has_root() const
     {
@@ -87,6 +93,12 @@ public:
     {
         _roots.append(DRYAD_MOV(nodes));
         _roots.back()->set_next_sibling(_roots.front());
+    }
+
+    void clear()
+    {
+        _roots = {};
+        _arena.clear();
     }
 
     //=== root nodes ===//
