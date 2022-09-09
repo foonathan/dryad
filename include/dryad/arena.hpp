@@ -149,6 +149,11 @@ public:
         return ::new (allocate<T>()) T(DRYAD_FWD(args)...);
     }
 
+    resource_ptr resource() const
+    {
+        return _resource;
+    }
+
     //=== unwinding ===//
     struct marker
     {

@@ -72,6 +72,8 @@ class node_ctor
     friend class tree;
     template <typename, typename>
     friend class forest;
+    template <typename, typename, typename>
+    friend class hash_forest;
 };
 
 /// Type-erased base class for all nodes in the AST.
@@ -392,6 +394,8 @@ private:
     friend class tree;
     template <typename, typename>
     friend class forest;
+    template <typename, typename, typename>
+    friend class hash_forest;
     template <typename>
     friend class _traverse_range;
 };

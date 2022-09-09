@@ -6,6 +6,7 @@ set(tests
     
         abstract_node.cpp
         arena.cpp
+        hash_forest.cpp
         node.cpp
         node_map.cpp
         tree.cpp
