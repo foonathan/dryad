@@ -36,7 +36,7 @@ struct leaf_node2 : dryad::basic_node<node_kind::leaf2>
 TEST_CASE("abstract_node")
 {
     using namespace abstract_node;
-    dryad::tree<node_kind> tree;
+    dryad::tree<node> tree;
 
     auto leaf1 = tree.create<leaf_node1>();
     leaf1->set_foo(11);
@@ -77,7 +77,7 @@ struct leaf_node2 : dryad::basic_node<node_kind::leaf2>
 TEST_CASE("abstract_node_range")
 {
     using namespace abstract_node_range;
-    dryad::tree<node_kind> tree;
+    dryad::tree<node> tree;
 
     auto leaf1 = tree.create<leaf_node1>();
     leaf1->set_foo(11);
@@ -116,7 +116,7 @@ struct leaf_node2 : dryad::basic_node<node_kind::leaf2, node>
 TEST_CASE("abstract_node_all")
 {
     using namespace abstract_node_all;
-    dryad::tree<node_kind> tree;
+    dryad::tree<node> tree;
 
     auto leaf1 = tree.create<leaf_node1>();
     leaf1->set_foo(11);

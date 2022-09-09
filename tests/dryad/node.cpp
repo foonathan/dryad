@@ -51,7 +51,7 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
 
 TEST_CASE("node")
 {
-    dryad::tree<node_kind> tree;
+    dryad::tree<node> tree;
 
     auto a = tree.create<leaf_node>();
     auto b = tree.create<leaf_node>();
@@ -138,7 +138,7 @@ TEST_CASE("node")
 
 TEST_CASE("visit_node")
 {
-    dryad::tree<node_kind> tree;
+    dryad::tree<node> tree;
 
     auto a = tree.create<leaf_node>();
     auto b = tree.create<leaf_node>();

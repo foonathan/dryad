@@ -68,9 +68,9 @@ class node_ctor
 {
     node_ctor() = default;
 
-    template <typename, typename, typename>
+    template <typename, typename>
     friend class tree;
-    template <typename, typename, typename>
+    template <typename, typename>
     friend class forest;
 };
 
@@ -388,9 +388,9 @@ private:
     friend class unlinked_node_list;
     template <typename>
     friend class container_node;
-    template <typename, typename, typename>
+    template <typename, typename>
     friend class tree;
-    template <typename, typename, typename>
+    template <typename, typename>
     friend class forest;
     template <typename>
     friend class _traverse_range;

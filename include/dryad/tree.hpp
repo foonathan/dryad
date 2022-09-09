@@ -11,10 +11,12 @@
 namespace dryad
 {
 /// Owns multiple nodes, eventually all children of a single root node.
-template <typename NodeKind, typename RootNode = node<NodeKind>, typename MemoryResource = void>
+template <typename RootNode, typename MemoryResource = void>
 class tree
 {
 public:
+    using node_kind_type = typename RootNode::node_kind_type;
+
     //=== construction ===//
     tree() = default;
     explicit tree(MemoryResource* resource) : _arena(resource) {}
@@ -24,7 +26,7 @@ public:
     template <typename T, typename... Args>
     T* create(Args&&... args)
     {
-        static_assert(is_node<T, NodeKind> && !is_abstract_node<T, NodeKind>);
+        static_assert(is_node<T, node_kind_type> && !is_abstract_node<T, node_kind_type>);
         static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
 
         return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);
@@ -65,10 +67,12 @@ private:
 };
 
 /// Owns multiple nodes, eventually all children of a list of root nodes.
-template <typename NodeKind, typename RootNode = node<NodeKind>, typename MemoryResource = void>
+template <typename RootNode, typename MemoryResource = void>
 class forest
 {
 public:
+    using node_kind_type = typename RootNode::node_kind_type;
+
     //=== construction ===//
     forest() = default;
     explicit forest(MemoryResource* resource) : _arena(resource) {}
@@ -78,7 +82,7 @@ public:
     template <typename T, typename... Args>
     T* create(Args&&... args)
     {
-        static_assert(is_node<T, NodeKind> && !is_abstract_node<T, NodeKind>);
+        static_assert(is_node<T, node_kind_type> && !is_abstract_node<T, node_kind_type>);
         static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
 
         return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);

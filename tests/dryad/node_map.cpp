@@ -28,7 +28,7 @@ void check_entry(dryad::node_map<node, std::string>& map, node* key, const char*
 
 TEST_CASE("node_map")
 {
-    dryad::tree<char> tree;
+    dryad::tree<node> tree;
     auto              a = tree.create<node>();
     auto              b = tree.create<node>();
     auto              c = tree.create<node>();
@@ -109,7 +109,7 @@ void check_entry(dryad::node_set<node>& set, node* key)
 
 TEST_CASE("node_set")
 {
-    dryad::tree<char> tree;
+    dryad::tree<node> tree;
     auto              a = tree.create<node>();
     auto              b = tree.create<node>();
     auto              c = tree.create<node>();

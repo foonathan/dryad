@@ -34,7 +34,7 @@ struct container_node : dryad::basic_node<node_kind::container, dryad::container
 
 TEST_CASE("tree")
 {
-    dryad::tree<node_kind, container_node> tree;
+    dryad::tree<container_node> tree;
     CHECK(!tree.has_root());
     CHECK(tree.root() == nullptr);
 
@@ -86,7 +86,7 @@ TEST_CASE("tree")
 
 TEST_CASE("forest")
 {
-    dryad::forest<node_kind, container_node> forest;
+    dryad::forest<container_node> forest;
     CHECK(forest.roots().empty());
 
     SUBCASE("clear")
@@ -125,7 +125,7 @@ TEST_CASE("forest")
 
 TEST_CASE("visit_tree")
 {
-    dryad::tree<node_kind> tree;
+    dryad::tree<node> tree;
     CHECK(tree.root() == nullptr);
 
     auto a = tree.create<leaf_node>();
