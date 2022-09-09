@@ -12,6 +12,7 @@ set(header_files
 
         ${include_dir}/abstract_node.hpp
         ${include_dir}/arena.hpp
+        ${include_dir}/hash_algorithm.hpp
         ${include_dir}/node.hpp
         ${include_dir}/node_map.hpp
         ${include_dir}/symbol.hpp

@@ -7,6 +7,7 @@
 #include <cstring>
 #include <dryad/_detail/config.hpp>
 #include <dryad/_detail/hash_table.hpp>
+#include <dryad/hash_algorithm.hpp>
 
 namespace dryad::_detail
 {
@@ -123,32 +124,16 @@ struct symbol_index_hash_traits
         return std::strncmp(existing_str, str.ptr, str.length) == 0;
     }
 
-    // FNV-1a 64 bit hash
-    static constexpr std::uint64_t fnv_basis = 14695981039346656037ull;
-    static constexpr std::uint64_t fnv_prime = 1099511628211ull;
-
     std::size_t hash(IndexType entry) const
     {
-        auto str    = buffer->c_str(entry);
-        auto result = fnv_basis;
-        for (; *str != CharT(0); ++str)
-        {
-            auto byte = static_cast<std::make_unsigned_t<CharT>>(*str);
-            result ^= byte;
-            result *= fnv_prime;
-        }
-        return result;
+        auto str = buffer->c_str(entry);
+        return default_hash_algorithm().hash_c_str(str).finish();
     }
     static constexpr std::size_t hash(string_view str)
     {
-        auto result = fnv_basis;
-        for (auto i = 0u; i != str.length; ++i)
-        {
-            auto byte = static_cast<std::make_unsigned_t<CharT>>(str.ptr[i]);
-            result ^= byte;
-            result *= fnv_prime;
-        }
-        return result;
+        return default_hash_algorithm()
+            .hash_bytes(reinterpret_cast<const unsigned char*>(str.ptr), str.length * sizeof(CharT))
+            .finish();
     }
 };
 } // namespace dryad::_detail
