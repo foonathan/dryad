@@ -42,6 +42,11 @@ struct node_hasher : dryad::node_hasher_base<node_hasher, leaf_node, container_n
     template <typename HashAlgorithm>
     static void hash(HashAlgorithm&, const container_node*)
     {}
+    template <typename HashAlgorithm>
+    static void hash(HashAlgorithm& hasher, int data)
+    {
+        hasher.hash_scalar(data);
+    }
 
     static bool is_equal(const leaf_node* lhs, const leaf_node* rhs)
     {
@@ -51,20 +56,24 @@ struct node_hasher : dryad::node_hasher_base<node_hasher, leaf_node, container_n
     {
         return true;
     }
+    static bool is_equal(const leaf_node* entry, int data)
+    {
+        return entry->data == data;
+    }
 };
 } // namespace
 
 TEST_CASE("hash_forest")
 {
-    dryad::hash_forest<container_node, node_hasher> forest;
+    dryad::hash_forest<node, node_hasher> forest;
 
-    auto container1 = forest.create([](decltype(forest)::node_creator creator) {
+    auto container1 = forest.build([](decltype(forest)::node_creator creator) {
         auto a = creator.create<leaf_node>(1);
         auto b = creator.create<leaf_node>(2);
         auto c = creator.create<leaf_node>(3);
         return creator.create<container_node>(a, b, c);
     });
-    auto container2 = forest.create([](decltype(forest)::node_creator creator) {
+    auto container2 = forest.build([](decltype(forest)::node_creator creator) {
         auto a = creator.create<leaf_node>(1);
         auto b = creator.create<leaf_node>(2);
         auto c = creator.create<leaf_node>(3);
@@ -72,11 +81,17 @@ TEST_CASE("hash_forest")
     });
     CHECK(container1 == container2);
 
-    auto container3 = forest.create([](decltype(forest)::node_creator creator) {
+    auto container3 = forest.build([](decltype(forest)::node_creator creator) {
         auto a = creator.create<leaf_node>(1);
         auto b = creator.create<leaf_node>(2);
         return creator.create<container_node>(a, b);
     });
     CHECK(container1 != container3);
+
+    auto leaf1 = forest.create<leaf_node>(1);
+    auto leaf2 = forest.lookup_or_create<leaf_node>(1);
+    CHECK(leaf1 == leaf2);
+    auto leaf3 = forest.lookup_or_create<leaf_node>(2);
+    CHECK(leaf3 != leaf1);
 }
 

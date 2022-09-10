@@ -23,10 +23,16 @@ struct NodeHasher : ndryad::node_hasher_base<NodeHasher, NodeType1, NodeType2, .
     static void hash(HashAlgorithm& hasher, const NodeType2* n);
     ...
 
+    template <typename HashAlgorithm>
+    static void hash(HashAlgorithm& hasher, Key key);
+
     // Compares the non-tree data of each node type.
     // Does not need to compare children.
     static bool is_equal(const NodeType1* lhs, const NodeType1* rhs);
     static bool is_equal(const NodeType2* lhs, const NodeType2* rhs);
+    ...
+
+    static bool is_equal(const NodeTypeN* value, Key key);
     ...
 };
 #endif
@@ -77,6 +83,12 @@ struct node_hasher_base
 
 namespace dryad::_detail
 {
+template <typename T, typename Key>
+struct hash_forest_key
+{
+    const Key* key;
+};
+
 template <typename RootNode, typename NodeHasher>
 struct hash_forest_traits
 {
@@ -102,10 +114,27 @@ struct hash_forest_traits
     {
         return NodeHasher::is_equal_base(entry, key);
     }
-    static std::size_t hash(value_type key)
+    template <typename T, typename Key>
+    static bool is_equal(value_type entry, hash_forest_key<T, Key> key)
+    {
+        if (auto node = node_try_cast<T>(entry))
+            return NodeHasher::is_equal(node, *key.key);
+        else
+            return false;
+    }
+
+    static std::size_t hash(value_type entry)
     {
         default_hash_algorithm hasher;
-        NodeHasher::hash_base(hasher, key);
+        NodeHasher::hash_base(hasher, entry);
+        return DRYAD_MOV(hasher).finish();
+    }
+    template <typename T, typename Key>
+    static std::size_t hash(hash_forest_key<T, Key> key)
+    {
+        default_hash_algorithm hasher;
+        hasher.hash_scalar(T::kind());
+        NodeHasher::hash(hasher, *key.key);
         return DRYAD_MOV(hasher).finish();
     }
 };
@@ -167,7 +196,7 @@ public:
     };
 
     template <typename Builder>
-    RootNode* create(Builder builder)
+    RootNode* build(Builder builder)
     {
         if (_roots.should_rehash())
             rehash(2 * _roots.capacity());
@@ -190,6 +219,28 @@ public:
             entry.create(node);
             return node;
         }
+    }
+
+    template <typename T, typename... Args>
+    RootNode* create(Args&&... args)
+    {
+        return build(
+            [&](node_creator creator) { return creator.template create<T>(DRYAD_FWD(args)...); });
+    }
+
+    template <typename T, typename Key>
+    RootNode* lookup_or_create(Key&& key)
+    {
+        if (_roots.should_rehash())
+            rehash(2 * _roots.capacity());
+
+        auto entry = _roots.lookup_entry(_detail::hash_forest_key<T, Key>{&key});
+        if (entry)
+            return entry.get();
+
+        auto node = node_creator(this).template create<T>(DRYAD_FWD(key));
+        entry.create(node);
+        return node;
     }
 
     void clear()
