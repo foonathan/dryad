@@ -42,12 +42,35 @@ namespace dryad
 template <typename Derived, typename... NodeTypes>
 struct node_hasher_base
 {
+    template <typename HashAlgorithm, typename NodeType>
+    struct hasher_for
+    {
+        HashAlgorithm& hasher;
+
+        void operator()(const NodeType* n) const
+        {
+            Derived::hash(hasher, n);
+        }
+    };
+
     template <typename HashAlgorithm, typename Node>
     static void hash_base(HashAlgorithm& hasher, const Node* n)
     {
         hasher.hash_scalar(n->kind());
-        visit_tree(n, [&](const NodeTypes* n) { Derived::hash(hasher, n); }...);
+        visit_tree(n, hasher_for<HashAlgorithm, NodeTypes>{hasher}...);
     }
+
+    template <typename Node, typename NodeType>
+    struct is_equal_for
+    {
+        const Node* rhs;
+
+        bool operator()(const NodeType* lhs_casted) const
+        {
+            auto rhs_casted = node_cast<NodeType>(rhs);
+            return Derived::is_equal(lhs_casted, rhs_casted);
+        }
+    };
 
     template <typename Node>
     static bool is_equal_base(const Node* lhs, const Node* rhs)
@@ -57,10 +80,7 @@ struct node_hasher_base
             return false;
 
         // Compare node data itself.
-        if (!visit_node_all(lhs, [&](const NodeTypes* lhs_casted) {
-                auto rhs_casted = node_cast<NodeTypes>(rhs);
-                return Derived::is_equal(lhs_casted, rhs_casted);
-            }...))
+        if (!visit_node_all(lhs, is_equal_for<Node, NodeTypes>{rhs}...))
             return false;
 
         // Compare children.
