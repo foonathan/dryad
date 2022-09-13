@@ -730,11 +730,11 @@ protected:
         return static_cast<const _node*>(this->user_data_ptr());
     }
 
-    _node* child_after(const _node* prev)
+    _node* node_after(const _node* prev)
     {
         return prev == nullptr ? first_child() : prev->next_node();
     }
-    const _node* child_after(const _node* prev) const
+    const _node* node_after(const _node* prev) const
     {
         return prev == nullptr ? first_child() : prev->next_node();
     }
@@ -752,39 +752,25 @@ private:
 #define DRYAD_CHILD_NODE_GETTER(Type, Name, PrevChild)                                             \
     Type* Name()                                                                                   \
     {                                                                                              \
-        return ::dryad::node_cast<Type>(this->child_after(PrevChild));                             \
+        return ::dryad::node_cast<Type>(this->node_after(PrevChild));                              \
     }                                                                                              \
     const Type* Name() const                                                                       \
     {                                                                                              \
-        return ::dryad::node_cast<Type>(this->child_after(PrevChild));                             \
+        return ::dryad::node_cast<Type>(this->node_after(PrevChild));                              \
     }
 
 #define DRYAD_CHILD_NODE_RANGE_GETTER(Type, Name, PrevChild, NextChild)                            \
     auto Name()                                                                                    \
     {                                                                                              \
-        using iterator  = typename decltype(this->children())::iterator;                           \
-        auto next_child = NextChild;                                                               \
-        if (next_child == nullptr)                                                                 \
-            return ::dryad::make_node_range<Type>(iterator::from_ptr(                              \
-                                                      this->child_after(PrevChild)),               \
-                                                  this->children().end());                         \
-        else                                                                                       \
-            return ::dryad::make_node_range<Type>(iterator::from_ptr(                              \
-                                                      this->child_after(PrevChild)),               \
-                                                  iterator::from_ptr(next_child));                 \
+        using iterator = typename decltype(this->children())::iterator;                            \
+        return ::dryad::make_node_range<Type>(iterator::from_ptr(this->node_after(PrevChild)),     \
+                                              iterator::from_ptr(NextChild));                      \
     }                                                                                              \
     auto Name() const                                                                              \
     {                                                                                              \
-        using iterator  = typename decltype(this->children())::iterator;                           \
-        auto next_child = NextChild;                                                               \
-        if (next_child == nullptr)                                                                 \
-            return ::dryad::make_node_range<Type>(iterator::from_ptr(                              \
-                                                      this->child_after(PrevChild)),               \
-                                                  this->children().end());                         \
-        else                                                                                       \
-            return ::dryad::make_node_range<Type>(iterator::from_ptr(                              \
-                                                      this->child_after(PrevChild)),               \
-                                                  iterator::from_ptr(next_child));                 \
+        using iterator = typename decltype(this->children())::iterator;                            \
+        return ::dryad::make_node_range<Type>(iterator::from_ptr(this->node_after(PrevChild)),     \
+                                              iterator::from_ptr(NextChild));                      \
     }
 } // namespace dryad
 
