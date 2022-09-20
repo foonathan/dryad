@@ -259,6 +259,7 @@ public:
             return entry.get();
 
         auto node = node_creator(this).template create<T>(DRYAD_FWD(key));
+        node->set_next_parent(node);
         entry.create(node);
         return node;
     }
