@@ -254,7 +254,7 @@ public:
         if (_roots.should_rehash())
             rehash(2 * _roots.capacity());
 
-        auto entry = _roots.lookup_entry(_detail::hash_forest_key<T, Key>{&key});
+        auto entry = _roots.lookup_entry(_detail::hash_forest_key<T, std::decay_t<Key>>{&key});
         if (entry)
             return entry.get();
 
