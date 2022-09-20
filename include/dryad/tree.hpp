@@ -160,7 +160,7 @@ public:
                 {
                     // We go to the first child next.
                     auto first_child = _cur->children().front();
-                    if (first_child->has_children())
+                    if (first_child->_is_container)
                         _ev = traverse_event::enter;
                     else
                         _ev = traverse_event::leaf;
@@ -186,7 +186,7 @@ public:
                 if (_cur->next_node_is_parent())
                     // We go back to a container for the second time.
                     _ev = traverse_event::exit;
-                else if (_cur->next_node()->has_children())
+                else if (_cur->next_node()->_is_container)
                     // We're having a container as sibling.
                     _ev = traverse_event::enter;
                 else
@@ -236,7 +236,7 @@ private:
         if (node == nullptr)
             return;
 
-        if (node->has_children())
+        if (node->_is_container)
         {
             _begin._cur = node;
             _begin._ev  = traverse_event::enter;
