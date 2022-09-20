@@ -235,6 +235,7 @@ private:
     {
         if (node == nullptr)
             return;
+        DRYAD_PRECONDITION(node->is_linked_in_tree());
 
         if (node->_is_container)
         {
