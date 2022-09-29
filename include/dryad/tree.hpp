@@ -10,6 +10,33 @@
 
 namespace dryad
 {
+template <typename NodeKindType, typename MemoryResource>
+class node_creator : public node_ctor
+{
+public:
+    /// Creates a node of type T that is not yet linked into the tree.
+    template <typename T, typename... Args>
+    T* create(Args&&... args)
+    {
+        static_assert(is_node<T, NodeKindType> && !is_abstract_node<T, NodeKindType>);
+        static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
+
+        return _arena->template construct<T>(*this, DRYAD_FWD(args)...);
+    }
+
+private:
+    node_creator(arena<MemoryResource>& arena) : _arena(&arena) {}
+
+    arena<MemoryResource>* _arena;
+
+    template <typename, typename>
+    friend class tree;
+    template <typename, typename>
+    friend class forest;
+    template <typename, typename, typename>
+    friend class hash_forest;
+};
+
 /// Owns multiple nodes, eventually all children of a single root node.
 template <typename RootNode, typename MemoryResource = void>
 class tree
@@ -22,14 +49,12 @@ public:
     explicit tree(MemoryResource* resource) : _arena(resource) {}
 
     //=== node creation ===//
-    /// Creates a node of type T that is not yet linked into the tree.
+    using node_creator = dryad::node_creator<node_kind_type, MemoryResource>;
+
     template <typename T, typename... Args>
     T* create(Args&&... args)
     {
-        static_assert(is_node<T, node_kind_type> && !is_abstract_node<T, node_kind_type>);
-        static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
-
-        return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);
+        return node_creator(_arena).template create<T>(DRYAD_FWD(args)...);
     }
 
     void clear()
@@ -78,14 +103,12 @@ public:
     explicit forest(MemoryResource* resource) : _arena(resource) {}
 
     //=== node creation ===//
-    /// Creates a node of type T that is not yet linked into the tree.
+    using node_creator = dryad::node_creator<node_kind_type, MemoryResource>;
+
     template <typename T, typename... Args>
     T* create(Args&&... args)
     {
-        static_assert(is_node<T, node_kind_type> && !is_abstract_node<T, node_kind_type>);
-        static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
-
-        return _arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);
+        return node_creator(_arena).template create<T>(DRYAD_FWD(args)...);
     }
 
     void insert_root(RootNode* root)

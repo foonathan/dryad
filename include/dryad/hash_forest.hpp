@@ -193,27 +193,7 @@ public:
     }
 
     //=== node creation ===//
-    class node_creator
-    {
-    public:
-        /// Creates a node of type T that is not yet linked into the tree.
-        /// The pointer must not be used outside the creation function.
-        template <typename T, typename... Args>
-        T* create(Args&&... args)
-        {
-            static_assert(is_node<T, node_kind_type> && !is_abstract_node<T, node_kind_type>);
-            static_assert(std::is_trivially_destructible_v<T>, "nobody will call its destructor");
-
-            return _forest->_arena.template construct<T>(node_ctor{}, DRYAD_FWD(args)...);
-        }
-
-    private:
-        explicit node_creator(hash_forest* forest) : _forest(forest) {}
-
-        hash_forest* _forest;
-
-        friend hash_forest;
-    };
+    using node_creator = dryad::node_creator<node_kind_type, MemoryResource>;
 
     template <typename Builder>
     RootNode* build(Builder builder)
@@ -223,7 +203,7 @@ public:
 
         auto marker = _arena.top();
 
-        auto node = builder(node_creator(this));
+        auto node = builder(node_creator(_arena));
         node->set_next_parent(node);
 
         auto entry = _roots.lookup_entry(node);
@@ -258,7 +238,7 @@ public:
         if (entry)
             return entry.get();
 
-        auto node = node_creator(this).template create<T>(DRYAD_FWD(key));
+        auto node = node_creator(_arena).template create<T>(DRYAD_FWD(key));
         node->set_next_parent(node);
         entry.create(node);
         return node;

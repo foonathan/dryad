@@ -64,16 +64,15 @@ constexpr bool is_abstract_node = is_node<T, NodeKind>&& T::type_is_abstract();
 
 namespace dryad
 {
+template <typename NodeKindType, typename MemoryResource = void>
+class node_creator;
+
 class node_ctor
 {
     node_ctor() = default;
 
     template <typename, typename>
-    friend class tree;
-    template <typename, typename>
-    friend class forest;
-    template <typename, typename, typename>
-    friend class hash_forest;
+    friend class node_creator;
 };
 
 /// Type-erased base class for all nodes in the AST.
