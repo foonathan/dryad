@@ -591,6 +591,22 @@ public:
         list._first = list._last = nullptr;
     }
 
+    T* pop_front()
+    {
+        DRYAD_PRECONDITION(_first != nullptr);
+        auto result = _first;
+
+        _first = static_cast<T*>(result->next_node());
+        if (result == _last)
+        {
+            DRYAD_ASSERT(_first == nullptr, "last node shouldn't have a next node");
+            _last = nullptr;
+        }
+
+        result->unlink();
+        return result;
+    }
+
 private:
     T* _first;
     T* _last;

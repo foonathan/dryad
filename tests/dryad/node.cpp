@@ -86,6 +86,14 @@ TEST_CASE("node")
         CHECK(list.front() == a);
         CHECK(list.back() == c);
 
+        CHECK(list.pop_front() == a);
+        CHECK(!list.empty());
+        CHECK(!list.has_single_element());
+        CHECK(list.front() == b);
+        CHECK(list.back() == c);
+
+        list.push_front(a);
+
         auto iter = list.begin();
         CHECK(iter != list.end());
         CHECK(*iter == a);
