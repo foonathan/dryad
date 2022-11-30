@@ -397,7 +397,18 @@ private:
     friend class hash_forest;
     template <typename>
     friend class _traverse_range;
+    template <typename NK>
+    friend void leak_node(node<NK>* n);
 };
+
+/// Finishes the node by turning it into a root node.
+/// It is part of the storage for the tree, but not accessible from the outside,
+/// so "leaked".
+template <typename NodeKind>
+void leak_node(node<NodeKind>* n)
+{
+    n->set_next_parent(n);
+}
 } // namespace dryad
 
 namespace dryad
