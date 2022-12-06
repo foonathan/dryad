@@ -181,7 +181,8 @@ public:
         _roots.free(_arena.resource());
     }
 
-    hash_forest(hash_forest&& other) noexcept : _arena(LEXY_MOV(other._arena)), _roots(other._roots)
+    hash_forest(hash_forest&& other) noexcept
+    : _arena(DRYAD_MOV(other._arena)), _roots(other._roots)
     {
         other._roots = {};
     }
